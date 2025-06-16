@@ -1,5 +1,5 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { useState, Fragment } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { Combobox, Transition } from "@headlessui/react";
 import axios from "axios";
 
@@ -11,23 +11,43 @@ const Diagnosa = () => {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [tindakanOptions, setTindakanOptions] = useState([]); // Ubah menjadi state untuk menyimpan data tindakan dari API
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = "https://ti054a02.agussbn.my.id"; // Hardcoded API URL
 
-  const tindakanOptions = [
-    "Pemberian obat tetes mata antibiotik",
-    "Pemberian obat tetes mata steroid",
-    "Kompres air hangat",
-    "Pembersihan kelopak mata",
-    "Rujukan ke spesialis mata",
-    "Observasi dan monitoring",
-  ];
+  useEffect(() => {
+    const fetchTindakanOptions = async () => {
+      try {
+        const response = await fetch(
+          "https://ti054a03.agussbn.my.id/api/tindakan",
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data tindakan");
+        }
+
+        const data = await response.json();
+        setTindakanOptions(data.data || []); // Asumsikan data tindakan ada di `data.data`
+      } catch (error) {
+        console.error("Error fetching tindakan options:", error);
+      }
+    };
+
+    fetchTindakanOptions();
+  }, []);
 
   const filteredTindakan =
     query === ""
       ? tindakanOptions
       : tindakanOptions.filter((item) =>
-          item.toLowerCase().includes(query.toLowerCase())
+          item.nama_tindakan.toLowerCase().includes(query.toLowerCase()) // Asumsikan nama tindakan ada di `nama_tindakan`
         );
 
   const handleSubmit = async () => {
@@ -253,7 +273,7 @@ const Diagnosa = () => {
                                 : "text-[#0099a8]"
                             }`
                           }
-                          value={item}
+                          value={item.nama_tindakan} // Gunakan `nama_tindakan` sebagai nilai
                         >
                           {({ selected }) => (
                             <span
@@ -261,7 +281,7 @@ const Diagnosa = () => {
                                 selected ? "font-medium" : "font-normal"
                               }`}
                             >
-                              {item}
+                              {item.nama_tindakan} {/* Tampilkan nama tindakan */}
                             </span>
                           )}
                         </Combobox.Option>

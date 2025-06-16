@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, Fragment, useEffect } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
+const API_URL = "https://nazarfadil.me"; // Hardcoded API URL
+
 const ListPasien = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -34,37 +36,26 @@ const ListPasien = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      const userData = JSON.parse(localStorage.getItem("user"));
 
-      if (!token || !userData?.poli?.id_poli) {
+      if (!token) {
         navigate("/login");
-        throw new Error("Unauthorized or missing poli information");
+        throw new Error("Unauthorized");
       }
 
-      console.log(
-        "Fetching from URL:",
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/pasien?page=${page}&search=${search}&id_poli=${
-          userData.poli.id_poli
-        }`
-      );
+      const params = new URLSearchParams({
+        page: page.toString(),
+        search: search,
+      });
 
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL
-        }/api/pasien?page=${page}&search=${search}&id_poli=${
-          userData.poli.id_poli
-        }`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
+      const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -77,7 +68,6 @@ const ListPasien = () => {
       }
 
       const data = await response.json();
-      console.log("API Response:", data);
 
       if (data.status === "success") {
         setPatients(data.data.data);
@@ -488,3 +478,4 @@ const ListPasien = () => {
 };
 
 export default ListPasien;
+

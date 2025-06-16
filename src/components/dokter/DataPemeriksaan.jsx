@@ -28,7 +28,7 @@ const DataPemeriksaan = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = "https://ti054a02.agussbn.my.id"; // Hardcoded API URL
 
   useEffect(() => {
     const fetchPemeriksaanData = async () => {
@@ -43,15 +43,12 @@ const DataPemeriksaan = () => {
         console.log("Fetching data for no_reg:", no_reg);
 
         // Mengambil data pemeriksaan berdasarkan no_registrasi
-        const response = await axios.get(
-          `${API_URL}/api/pemeriksaan/${no_reg}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
-        );
+        const response = await axios.get(`${API_URL}/api/pemeriksaan/${no_reg}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
 
         console.log("API Response:", response.data);
 

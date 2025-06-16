@@ -6,7 +6,6 @@ import axios from "axios";
 const ListPasienPerawat = () => {
   const [isFocused, setIsFocused] = useState(false);
   const navigate = useNavigate();
-  const [poliName, setPoliName] = useState("");
   const [nurseName, setNurseName] = useState("");
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,10 +13,9 @@ const ListPasienPerawat = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [poliId, setPoliId] = useState(null);
 
   // Definisikan API URL di luar fungsi untuk memudahkan debugging
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = "https://nazarfadil.me"; // Hardcoded API URL
 
   useEffect(() => {
     const storedData = localStorage.getItem("user");
@@ -25,10 +23,6 @@ const ListPasienPerawat = () => {
       const userData = JSON.parse(storedData);
       if (userData.user && userData.user.nama_lengkap) {
         setNurseName(userData.user.nama_lengkap);
-      }
-      if (userData.poli) {
-        setPoliName(userData.poli.nama_poli.toUpperCase());
-        setPoliId(userData.poli.id_poli);
       }
     } else {
       navigate("/login");
@@ -40,9 +34,8 @@ const ListPasienPerawat = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem("token");
-      const userData = JSON.parse(localStorage.getItem("user"));
 
-      if (!token || !userData?.poli?.id_poli) {
+      if (!token) {
         navigate("/login");
         return;
       }
@@ -50,18 +43,16 @@ const ListPasienPerawat = () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         search: searchQuery,
-        id_poli: userData.poli.id_poli.toString(),
       });
 
-      console.log("Fetching from URL:", `${API_URL}/api/pasien?${params}`);
-
-      const response = await fetch(`${API_URL}/api/pasien?${params}`, {
+      const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
           "Content-Type": "application/json",
         },
+        mode: "cors",
         credentials: "include",
       });
 
@@ -76,7 +67,6 @@ const ListPasienPerawat = () => {
       }
 
       const data = await response.json();
-      console.log("API Response:", data);
 
       if (data.status === "success") {
         setPatients(data.data.data);
@@ -86,7 +76,6 @@ const ListPasienPerawat = () => {
         throw new Error(data.message || "Gagal mengambil data pasien");
       }
     } catch (err) {
-      console.error("Error details:", err);
       setError(err.message);
       setPatients([]);
     } finally {
@@ -95,10 +84,8 @@ const ListPasienPerawat = () => {
   };
 
   useEffect(() => {
-    if (poliId) {
-      fetchPatients();
-    }
-  }, [currentPage, searchQuery, poliId]);
+    fetchPatients();
+  }, [currentPage, searchQuery]); // Hapus poliId dari dependency
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -122,7 +109,7 @@ const ListPasienPerawat = () => {
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      navigate("/login");
+      navigate("/");
     }
   };
 
@@ -293,8 +280,7 @@ const ListPasienPerawat = () => {
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-lg font-bold text-black">
-              PASIEN RAWAT JALAN{" "}
-              <span className="font-normal">({poliName})</span>
+              PASIEN RAWAT JALAN
             </h1>
             <p className="text-sm text-gray-600 mt-1">
               Halo, nurse {nurseName}
@@ -489,3 +475,5 @@ const ListPasienPerawat = () => {
 };
 
 export default ListPasienPerawat;
+
+

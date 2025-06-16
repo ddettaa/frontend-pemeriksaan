@@ -13,7 +13,7 @@ const DashboardPerawat = () => {
 
   // Fetch data jadwal dari API saat komponen mount
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/jadwal")
+    fetch("https://ti054a02.agussbn.my.id/api/jadwal")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch data");
         return res.json();
@@ -44,7 +44,7 @@ const DashboardPerawat = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login");
+    navigate("/");
   };
 
   return (

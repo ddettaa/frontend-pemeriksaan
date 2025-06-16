@@ -26,7 +26,7 @@ const InputPemeriksaan = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "https://nazarfadil.me";
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -48,7 +48,7 @@ const InputPemeriksaan = () => {
 
         console.log("Fetching patient data with params:", params.toString());
 
-        const response = await axios.get(`${API_URL}/api/pasien?${params}`, {
+        const response = await axios.get(`${API_URL}/api/pasiens?${params}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/json",
@@ -245,7 +245,7 @@ const InputPemeriksaan = () => {
 
       // Simpan data pemeriksaan
       const response = await axios.post(
-        `${API_URL}/api/pemeriksaan`,
+        `https://ti054a02.agussbn.my.id/api/pemeriksaan`,
         pemeriksaanData,
         {
           headers: {

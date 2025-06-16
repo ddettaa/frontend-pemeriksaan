@@ -41,7 +41,7 @@ const Dashboard = () => {
 
         const token = localStorage.getItem("token"); // jika pakai token
         const response = await fetch(
-          "http://localhost:8000/api/jadwal-dokter",
+          "https://ti054a02.agussbn.my.id/api/jadwal-dokter",
           {
             headers: {
               Authorization: `Bearer ${token}`, // jika perlu otentikasi

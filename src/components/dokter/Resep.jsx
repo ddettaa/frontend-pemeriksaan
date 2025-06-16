@@ -6,6 +6,7 @@ const Resep = () => {
   const [forms, setForms] = useState([{ obat: '', aturan: '', jumlah: '' }]);
   const [query, setQuery] = useState('');
   const [resepId, setResepId] = useState('');
+  const [obatOptions, setObatOptions] = useState([]); // Ubah menjadi state untuk menyimpan data obat dari API
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -21,22 +22,36 @@ const Resep = () => {
     setResepId(generateResepId());
   }, []);
 
-  const obatOptions = [
-    "Chloramphenicol",
-    "Gentamicin",
-    "Ciprofloxacin",
-    "Ofloxacin",
-    "Moxifloxacin",
-    "Prednisolone",
-    "Dexamethasone",
-    "Artificial Tears"
-  ];
+  useEffect(() => {
+    const fetchObatOptions = async () => {
+      try {
+        const response = await fetch("https://ti054a04.agussbn.my.id/api/admin/obat", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Gagal mengambil data obat");
+        }
+
+        const data = await response.json();
+        setObatOptions(data.data || []); // Asumsikan data obat ada di `data.data`
+      } catch (error) {
+        console.error("Error fetching obat options:", error);
+      }
+    };
+
+    fetchObatOptions();
+  }, []);
 
   const filteredObat =
     query === ''
       ? obatOptions
       : obatOptions.filter((item) =>
-          item.toLowerCase().includes(query.toLowerCase())
+          item.nama_obat.toLowerCase().includes(query.toLowerCase()) // Asumsikan nama obat ada di `nama_obat`
         );
 
   const handleAddForm = () => {
@@ -248,11 +263,11 @@ const Resep = () => {
                                   active ? 'bg-[#0099a8] text-white' : 'text-[#0099a8]'
                                 }`
                               }
-                              value={item}
+                              value={item.nama_obat} // Gunakan `nama_obat` sebagai nilai
                             >
                               {({ selected }) => (
                                 <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
-                                  {item}
+                                  {item.nama_obat} {/* Tampilkan nama obat */}
                                 </span>
                               )}
                             </Combobox.Option>
@@ -307,4 +322,4 @@ const Resep = () => {
   );
 };
 
-export default Resep; 
+export default Resep;

@@ -2,7 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, Fragment, useEffect } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
-const API_URL = "https://nazarfadil.me"; // Hardcoded API URL
+const API_URL = "https://ti054a01.agussbn.my.id"; // Ganti API URL
+const TOKEN = "4|78SGeds3QtWdjTItjyY9v55saQehW3I00FoczLz9f1120159"; // Gunakan token yang diberikan
 
 const ListPasien = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,14 +34,9 @@ const ListPasien = () => {
 
   const fetchPatients = async (page = 1, search = "") => {
     try {
+      console.log("Token:", TOKEN); // Log token untuk memastikan token dikirim
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        navigate("/login");
-        throw new Error("Unauthorized");
-      }
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -50,7 +46,7 @@ const ListPasien = () => {
       const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${TOKEN}`, // Pastikan format header benar
           Accept: "application/json",
           "Content-Type": "application/json",
         },
@@ -478,4 +474,5 @@ const ListPasien = () => {
 };
 
 export default ListPasien;
+
 

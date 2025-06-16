@@ -15,7 +15,8 @@ const ListPasienPerawat = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Definisikan API URL di luar fungsi untuk memudahkan debugging
-  const API_URL = "https://nazarfadil.me"; // Hardcoded API URL
+  const API_URL = "https://ti054a01.agussbn.my.id"; // Ganti API URL
+  const TOKEN = "3|sqqccxj43Nbbxhn9YONX7VHQ6qpOd9LoKzXR6aPhce9161aa"; // Gunakan token yang diberikan
 
   useEffect(() => {
     const storedData = localStorage.getItem("user");
@@ -33,12 +34,6 @@ const ListPasienPerawat = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        navigate("/login");
-        return;
-      }
 
       const params = new URLSearchParams({
         page: currentPage.toString(),
@@ -48,7 +43,7 @@ const ListPasienPerawat = () => {
       const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${TOKEN}`, // Gunakan token yang diberikan
           Accept: "application/json",
           "Content-Type": "application/json",
         },

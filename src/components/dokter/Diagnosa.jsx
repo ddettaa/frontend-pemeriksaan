@@ -101,7 +101,7 @@ const Diagnosa = () => {
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        navigate("/login");
+        navigate("/");
       }
     } finally {
       setIsLoading(false);

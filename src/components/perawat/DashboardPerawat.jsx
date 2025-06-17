@@ -73,7 +73,7 @@ const DashboardPerawat = () => {
 
         <div className="group mb-8">
           <Link
-            to="/perawat/list-pasien"
+            to="/perawat/listPasien"
             className="flex flex-col items-center"
           >
             <button className="p-3 rounded-xl mb-2 focus:outline-none bg-transparent hover:bg-white transform hover:scale-105 transition-all duration-200 hover:shadow-md">

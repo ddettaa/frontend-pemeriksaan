@@ -32,7 +32,7 @@ function App() {
             <ProtectedRoute allowedRoles={["dokter"]}>
               <Routes>
                 <Route path="Dashboard" element={<DokterDashboard />} />
-                <Route path="list-pasien" element={<ListPasien />} />
+                <Route path="listPasien" element={<ListPasien />} />
                 <Route
                   path="data-pemeriksaan/:id_pasien"
                   element={<DataPemeriksaan />}
@@ -56,9 +56,9 @@ function App() {
             <ProtectedRoute allowedRoles={["perawat"]}>
               <Routes>
                 <Route path="DashboardPerawat" element={<DashboardPerawat />} />
-                <Route path="list-pasien" element={<ListPasienPerawat />} />
+                <Route path="listPasien" element={<ListPasienPerawat />} />
                 <Route
-                  path="input-pemeriksaan/:id_pasien"
+                  path="inputPemeriksaan/:rm"
                   element={<InputPemeriksaan />}
                 />
                 <Route path="history" element={<HistoryPerawat />} />

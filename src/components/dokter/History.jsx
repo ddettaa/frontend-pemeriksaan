@@ -26,7 +26,7 @@ const History = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Arahkan ke halaman login
-    navigate("/login");
+    navigate("/");
   };
 
   return (

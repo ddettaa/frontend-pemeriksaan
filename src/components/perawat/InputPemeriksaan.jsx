@@ -5,7 +5,7 @@ import { Dialog } from "@headlessui/react";
 import axios from "axios";
 
 const InputPemeriksaan = () => {
-  const { id_pasien: no_reg } = useParams();
+  const { id_pasien: rm } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     suhu: "",
@@ -16,7 +16,7 @@ const InputPemeriksaan = () => {
   });
 
   const [patientData, setPatientData] = useState({
-    noReg: "",
+    rm: "",
     nama: "",
   });
 
@@ -26,7 +26,7 @@ const InputPemeriksaan = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://nazarfadil.me";
+  const API_URL = import.meta.env.VITE_API_URL || "https://ti054a01.agussbn.my.id";
 
   useEffect(() => {
     const fetchPatientData = async () => {
@@ -36,13 +36,13 @@ const InputPemeriksaan = () => {
         const userData = JSON.parse(localStorage.getItem("user"));
 
         if (!token || !userData?.poli?.id_poli) {
-          navigate("/login");
+          navigate("/");
           return;
         }
 
         // Menggunakan no_reg untuk mencari data pasien
         const params = new URLSearchParams({
-          search: no_reg,
+          search: rm,
           id_poli: userData.poli.id_poli.toString(),
         });
 
@@ -61,9 +61,9 @@ const InputPemeriksaan = () => {
         ) {
           const patient = response.data.data.data[0];
           // Pastikan no_reg yang diset sesuai dengan yang dari URL
-          if (patient.no_reg.toString() === no_reg) {
+          if (patient.rm.toString() === rm) {
             setPatientData({
-              noReg: patient.no_reg,
+              rm: patient.rm,
               nama: patient.nama_pasien,
             });
             console.log("Patient data loaded:", patient);
@@ -77,7 +77,7 @@ const InputPemeriksaan = () => {
         if (err.response?.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          navigate("/login");
+          navigate("/");
         }
         setError(err.message || "Gagal mengambil data pasien");
         console.error("Error fetching patient data:", err);
@@ -86,10 +86,10 @@ const InputPemeriksaan = () => {
       }
     };
 
-    if (no_reg) {
+    if (rm) {
       fetchPatientData();
     }
-  }, [no_reg, navigate]);
+  }, [rm, navigate, API_URL]); // <-- tambahkan API_URL
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -100,7 +100,7 @@ const InputPemeriksaan = () => {
       }));
     } else if (name === "tensi") {
       // Izinkan angka dan slash untuk tensi
-      if (/^[\d\/]*$/.test(value)) {
+      if (/^[\d/]*$/.test(value)) {
         setFormData((prev) => ({
           ...prev,
           [name]: value,
@@ -158,7 +158,7 @@ const InputPemeriksaan = () => {
       const userData = JSON.parse(localStorage.getItem("user"));
 
       if (!token || !userData?.poli?.id_poli) {
-        navigate("/login");
+        navigate("/");
         return;
       }
 
@@ -173,13 +173,13 @@ const InputPemeriksaan = () => {
       }
 
       // Validasi no_reg
-      if (!patientData.noReg) {
+      if (!patientData.rm) {
         throw new Error("No Registrasi tidak valid");
       }
 
       // Format data sesuai dengan struktur tabel pemeriksaan
       const pemeriksaanData = {
-        no_registrasi: parseInt(patientData.noReg),
+        no_registrasi: parseInt(patientData.rm),
         id_dokter: userData.poli.id_dokter,
         id_perawat: parseInt(id_perawat),
         rm: null,
@@ -209,8 +209,8 @@ const InputPemeriksaan = () => {
       console.log("Data yang akan dikirim:", {
         pemeriksaanData,
         patientData,
-        noReg: patientData.noReg,
-        parsedNoReg: parseInt(patientData.noReg),
+        rm: patientData.rm,
+        parsedrm: parseInt(patientData.rm),
         userData,
       });
 
@@ -262,7 +262,7 @@ const InputPemeriksaan = () => {
         await axios.post(
           `${API_URL}/api/status`,
           {
-            no_registrasi: patientData.noReg,
+            no_registrasi: patientData.rm,
             status: "Diperiksa",
             role: "perawat",
             id_petugas: id_perawat,
@@ -277,7 +277,7 @@ const InputPemeriksaan = () => {
           }
         );
 
-        navigate("/perawat/list-pasien");
+        navigate("/perawat/listPasien");
       } else {
         throw new Error(
           response.data.message || "Gagal menyimpan data pemeriksaan"
@@ -301,7 +301,7 @@ const InputPemeriksaan = () => {
       if (err.response?.status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        navigate("/login");
+        navigate("/");
       }
     } finally {
       setIsSaving(false);
@@ -317,10 +317,10 @@ const InputPemeriksaan = () => {
           "Apakah Anda yakin ingin membatalkan? Data yang telah diisi akan hilang."
         )
       ) {
-        navigate("/perawat/list-pasien");
+        navigate("/perawat/listPasien");
       }
     } else {
-      navigate("/perawat/list-pasien");
+      navigate("/perawat/listPasien");
     }
   };
 
@@ -329,7 +329,7 @@ const InputPemeriksaan = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // Arahkan ke halaman login
-    navigate("/login");
+    navigate("/");
   };
 
   return (
@@ -359,7 +359,7 @@ const InputPemeriksaan = () => {
 
         <div className="group mb-8">
           <Link
-            to="/perawat/list-pasien"
+            to="/perawat/listPasien"
             className="flex flex-col items-center"
           >
             <button className="p-3 rounded-xl mb-2 focus:outline-none bg-[#0099a8] shadow-md transform hover:scale-105 transition-all duration-200 hover:bg-[#007a85]">
@@ -509,7 +509,7 @@ const InputPemeriksaan = () => {
               <div className="relative">
                 <input
                   type="text"
-                  value={patientData.noReg}
+                  value={patientData.rm}
                   disabled
                   readOnly
                   className="w-full border border-gray-300 px-4 py-4 rounded-xl bg-gray-100 text-gray-600 cursor-not-allowed shadow-sm"

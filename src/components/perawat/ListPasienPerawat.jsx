@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState, Fragment, useEffect } from "react";
+import { useState, Fragment, useEffect, useCallback } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import axios from "axios";
 
@@ -15,8 +15,7 @@ const ListPasienPerawat = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Definisikan API URL di luar fungsi untuk memudahkan debugging
-  const API_URL = "https://ti054a01.agussbn.my.id"; // Ganti API URL
-  const TOKEN = "3|sqqccxj43Nbbxhn9YONX7VHQ6qpOd9LoKzXR6aPhce9161aa"; // Gunakan token yang diberikan
+  const API_URL = "https://ti054a01.agussbn.my.id"; // Updated to match the API URL used in DashboardPerawat
 
   useEffect(() => {
     const storedData = localStorage.getItem("user");
@@ -26,24 +25,27 @@ const ListPasienPerawat = () => {
         setNurseName(userData.user.nama_lengkap);
       }
     } else {
-      navigate("/login");
+      navigate("/");
     }
   }, [navigate]);
 
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-
+      // Use the specific token provided by the user
+      const token = "5|cLspys0H4S5EKbC4b6xwxmUx7GsXpIMeBkXWZEfmee7f7e4f";
+      
       const params = new URLSearchParams({
         page: currentPage.toString(),
         search: searchQuery,
       });
 
       const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
+
         method: "GET",
         headers: {
-          Authorization: `Bearer ${TOKEN}`, // Gunakan token yang diberikan
+          Authorization: `Bearer ${token}`,
           Accept: "application/json",
           "Content-Type": "application/json",
         },
@@ -55,7 +57,7 @@ const ListPasienPerawat = () => {
         if (response.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          navigate("/login");
+          navigate("/");
           throw new Error("Sesi anda telah berakhir, silahkan login kembali");
         }
         throw new Error("Gagal mengambil data pasien");
@@ -63,24 +65,28 @@ const ListPasienPerawat = () => {
 
       const data = await response.json();
 
-      if (data.status === "success") {
-        setPatients(data.data.data);
-        setTotalPages(Math.ceil(data.data.total / data.data.per_page));
-        setError(null);
+      console.log(data); // opsional: bantu debug struktur JSON
+      
+      if (data && Array.isArray(data.data)) {
+        setPatients(data.data);
+        setTotalPages(Math.ceil(data.meta.total / data.meta.per_page));
       } else {
-        throw new Error(data.message || "Gagal mengambil data pasien");
+        setPatients([]);
+        throw new Error("Format data tidak sesuai");
       }
+
+
     } catch (err) {
       setError(err.message);
       setPatients([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_URL, currentPage, navigate, searchQuery]);
 
   useEffect(() => {
     fetchPatients();
-  }, [currentPage, searchQuery]); // Hapus poliId dari dependency
+  }, [fetchPatients]); // <-- tambahkan fetchPatients ke dependency array
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -327,7 +333,7 @@ const ListPasienPerawat = () => {
               <input
                 id="search"
                 type="text"
-                placeholder="Cari berdasarkan nama pasien atau nomor registrasi..."
+                placeholder="Cari berdasarkan nama pasien atau nomor Rekam Medis..."
                 className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none"
                 value={searchQuery}
                 onChange={handleSearch}
@@ -375,7 +381,7 @@ const ListPasienPerawat = () => {
               <table className="min-w-full bg-white">
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
-                    <th className="px-4 py-3 font-medium text-left">No Reg</th>
+                    <th className="px-4 py-3 font-medium text-left">No rm</th>
                     <th className="px-4 py-3 font-medium text-left">Antrian</th>
                     <th className="px-4 py-3 font-medium text-left">Nama</th>
                     <th className="px-4 py-3 font-medium text-left">Status</th>
@@ -388,7 +394,7 @@ const ListPasienPerawat = () => {
                       key={patient.id_pasien}
                       className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
                     >
-                      <td className="px-4 py-3">{patient.no_reg}</td>
+                      <td className="px-4 py-3">{patient.rm}</td>
                       <td className="px-4 py-3">{patient.no_antrian}</td>
                       <td className="px-4 py-3">{patient.nama_pasien}</td>
                       <td className="px-4 py-3">
@@ -402,7 +408,7 @@ const ListPasienPerawat = () => {
                       </td>
                       <td className="px-4 py-3">
                         <Link
-                          to={`/perawat/input-pemeriksaan/${patient.no_reg}`}
+                          to={`/perawat/InputPemeriksaan/${patient.rm}`}
                         >
                           <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
                             <svg
@@ -470,5 +476,3 @@ const ListPasienPerawat = () => {
 };
 
 export default ListPasienPerawat;
-
-

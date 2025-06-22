@@ -2,27 +2,35 @@ import React from "react";
 import { Navigate } from "react-router-dom";
 import authService from "../services/authService";
 
+const roleMap = {
+  3: "dokter",
+  4: "perawat",
+};
+
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const currentUser = authService.getCurrentUser();
-  console.log("ProtectedRoute - Current User:", currentUser); // Log current user
-  console.log("ProtectedRoute - Allowed Roles:", allowedRoles); // Log allowed roles
+  console.log("ProtectedRoute - Current User:", currentUser);
+  console.log("ProtectedRoute - Allowed Roles:", allowedRoles);
 
   if (!currentUser) {
-    console.log("ProtectedRoute - No user found, redirecting to login"); // Log redirect reason
-    // Not logged in, redirect to login page
+    console.log("ProtectedRoute - No user found, redirecting to login");
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = currentUser.user.role.toLowerCase();
-  const normalizedAllowedRoles = allowedRoles.map((role) => role.toLowerCase());
+  const userRole = roleMap[currentUser?.role];
+  if (!userRole) {
+    console.log("ProtectedRoute - Role tidak dikenali:", currentUser?.role);
+    return <Navigate to="/login" replace />;
+  }
 
-  if (allowedRoles.length > 0 && !normalizedAllowedRoles.includes(userRole)) {
-    console.log("ProtectedRoute - User role not allowed:", userRole); // Log role mismatch
-    // Role not authorized, redirect to home page
+  const normalizedAllowedRoles = allowedRoles.map((r) => r.toLowerCase());
+
+  if (!normalizedAllowedRoles.includes(userRole)) {
+    console.log("ProtectedRoute - Role not allowed:", userRole);
     return <Navigate to="/" replace />;
   }
 
-  console.log("ProtectedRoute - Access granted"); // Log successful access
+  console.log("ProtectedRoute - Access granted");
   return children;
 };
 

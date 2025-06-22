@@ -52,7 +52,7 @@ const History = () => {
         </div>
 
         <div className="group mb-8">
-          <Link to="/dokter/list-pasien" className="flex flex-col items-center">
+          <Link to="/dokter/listPasien" className="flex flex-col items-center">
             <button className="p-3 rounded-xl mb-2 focus:outline-none bg-transparent hover:bg-white transform hover:scale-105 transition-all duration-200 hover:shadow-md">
               <svg
                 className="w-5 h-5 text-gray-500 group-hover:text-[#0099a8]"

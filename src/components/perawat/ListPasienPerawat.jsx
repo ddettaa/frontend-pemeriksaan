@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, Fragment, useEffect, useCallback } from "react";
 import { Menu, Transition } from "@headlessui/react";
-import axios from "axios";
 
 const ListPasienPerawat = () => {
   const [isFocused, setIsFocused] = useState(false);
   const navigate = useNavigate();
   const [nurseName, setNurseName] = useState("");
+
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,15 +14,39 @@ const ListPasienPerawat = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Definisikan API URL di luar fungsi untuk memudahkan debugging
-  const API_URL = "https://ti054a01.agussbn.my.id"; // Updated to match the API URL used in DashboardPerawat
+  // Updated API URL
+  const API_URL = "https://ti054a01.agussbn.my.id";
 
   useEffect(() => {
     const storedData = localStorage.getItem("user");
+    console.log("Stored user data:", storedData); // Debug log
+    
     if (storedData) {
-      const userData = JSON.parse(storedData);
-      if (userData.user && userData.user.nama_lengkap) {
-        setNurseName(userData.user.nama_lengkap);
+      try {
+        const userData = JSON.parse(storedData);
+        console.log("Parsed user data:", userData); // Debug log
+        
+        // Check different possible structures for user data
+        let userName = "";
+        
+        // Try different possible paths for user name
+        if (userData.user && userData.user.nama_lengkap) {
+          userName = userData.user.nama_lengkap;
+        } else if (userData.nama_lengkap) {
+          userName = userData.nama_lengkap;
+        } else if (userData.user && userData.user.name) {
+          userName = userData.user.name;
+        } else if (userData.name) {
+          userName = userData.name;
+        }
+        
+        console.log("Extracted userName:", userName); // Debug log
+        
+        setNurseName(userName || "Perawat");
+        
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        setNurseName("Perawat");
       }
     } else {
       navigate("/");
@@ -33,48 +57,88 @@ const ListPasienPerawat = () => {
     try {
       setLoading(true);
       setError(null);
-      // Use the specific token provided by the user
-      const token = "5|cLspys0H4S5EKbC4b6xwxmUx7GsXpIMeBkXWZEfmee7f7e4f";
-      
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        search: searchQuery,
-      });
 
-      const response = await fetch(`${API_URL}/api/pasiens?${params}`, {
-
+      // Use the correct API endpoint without token
+      const response = await fetch(`${API_URL}/api/pendaftaran`, {
         method: "GET",
         headers: {
-          Authorization: `Bearer ${token}`,
           Accept: "application/json",
           "Content-Type": "application/json",
         },
         mode: "cors",
-        credentials: "include",
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          navigate("/");
-          throw new Error("Sesi anda telah berakhir, silahkan login kembali");
-        }
         throw new Error("Gagal mengambil data pasien");
       }
 
       const data = await response.json();
+      console.log("API Response:", data); // Debug log
 
-      console.log(data); // opsional: bantu debug struktur JSON
-      
       if (data && Array.isArray(data.data)) {
-        setPatients(data.data);
-        setTotalPages(Math.ceil(data.meta.total / data.meta.per_page));
+        let filteredPatients = data.data;
+        
+        // Filter by nurse's poli if nursePoliName is available
+        const storedData = localStorage.getItem("user");
+        if (storedData) {
+          try {
+            const userData = JSON.parse(storedData);
+            
+            // Try to get poli name from different possible paths
+            let userPoliName = "";
+            if (userData.user && userData.user.poli_name) {
+              userPoliName = userData.user.poli_name;
+            } else if (userData.poli_name) {
+              userPoliName = userData.poli_name;
+            } else if (userData.user && userData.user.nama_poli) {
+              userPoliName = userData.user.nama_poli;
+            } else if (userData.nama_poli) {
+              userPoliName = userData.nama_poli;
+            } else if (userData.user && userData.user.poli) {
+              userPoliName = userData.user.poli;
+            } else if (userData.poli) {
+              userPoliName = userData.poli;
+            }
+            
+            console.log("Filtering by poli:", userPoliName); // Debug log
+            
+            if (userPoliName) {
+              filteredPatients = data.data.filter(patient => 
+                patient.nama_poli === userPoliName
+              );
+            }
+          } catch (error) {
+            console.error("Error parsing user data for filtering:", error);
+          }
+        }
+
+        // Apply search filter if searchQuery exists
+        if (searchQuery.trim()) {
+          filteredPatients = filteredPatients.filter(patient =>
+            patient.nama_pasien.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            patient.rm.toString().includes(searchQuery)
+          );
+        }
+
+        // Calculate pagination for filtered data
+        const itemsPerPage = 10;
+        const totalItems = filteredPatients.length;
+        const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
+        setTotalPages(calculatedTotalPages);
+        
+        // Get current page data
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+        
+        setPatients(paginatedPatients);
+        
+        console.log("Total patients:", totalItems); // Debug log
+        console.log("Current page patients:", paginatedPatients.length); // Debug log
       } else {
         setPatients([]);
         throw new Error("Format data tidak sesuai");
       }
-
 
     } catch (err) {
       setError(err.message);
@@ -82,11 +146,11 @@ const ListPasienPerawat = () => {
     } finally {
       setLoading(false);
     }
-  }, [API_URL, currentPage, navigate, searchQuery]);
+  }, [API_URL, currentPage, searchQuery]);
 
   useEffect(() => {
     fetchPatients();
-  }, [fetchPatients]); // <-- tambahkan fetchPatients ke dependency array
+  }, [fetchPatients]);
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value);
@@ -95,22 +159,12 @@ const ListPasienPerawat = () => {
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/logout`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Logout error:", error);
-    } finally {
+      // Remove token-based logout since we're not using tokens anymore
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
     }
   };
 
@@ -127,6 +181,7 @@ const ListPasienPerawat = () => {
 
     switch (normalizedStatus) {
       case "menunggu":
+      case "menunggu diperiksa":
         return "bg-yellow-100 text-yellow-800";
       case "diperiksa":
         return "bg-blue-100 text-blue-800";
@@ -381,95 +436,111 @@ const ListPasienPerawat = () => {
               <table className="min-w-full bg-white">
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
-                    <th className="px-4 py-3 font-medium text-left">No rm</th>
                     <th className="px-4 py-3 font-medium text-left">Antrian</th>
+                    <th className="px-4 py-3 font-medium text-left">No Registrasi</th>
+                    <th className="px-4 py-3 font-medium text-left">No RM</th>
                     <th className="px-4 py-3 font-medium text-left">Nama</th>
+                    <th className="px-4 py-3 font-medium text-left">Poli</th>
+                    <th className="px-4 py-3 font-medium text-left">Dokter</th>
                     <th className="px-4 py-3 font-medium text-left">Status</th>
                     <th className="px-4 py-3 font-medium text-left">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-200">
-                  {patients.map((patient) => (
-                    <tr
-                      key={patient.id_pasien}
-                      className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
-                    >
-                      <td className="px-4 py-3">{patient.rm}</td>
-                      <td className="px-4 py-3">{patient.no_antrian}</td>
-                      <td className="px-4 py-3">{patient.nama_pasien}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                            patient.current_status
-                          )}`}
-                        >
-                          {patient.current_status || "Menunggu"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          to={`/perawat/InputPemeriksaan/${patient.rm}`}
-                        >
-                          <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
-                            >
-                              <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
-                            </svg>
-                          </button>
-                        </Link>
+                  {patients.length > 0 ? (
+                    patients.map((patient) => (
+                      <tr
+                        key={patient.no_registrasi}
+                        className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
+                      >
+                        <td className="px-4 py-3">{patient.no_antrian}</td>
+                        <td className="px-4 py-3">{patient.no_registrasi}</td>
+                        <td className="px-4 py-3">{patient.rm}</td>
+                        <td className="px-4 py-3">{patient.nama_pasien}</td>
+                        <td className="px-4 py-3">{patient.nama_poli}</td>
+                        <td className="px-4 py-3">{patient.nama_dokter}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                              patient.status
+                            )}`}
+                          >
+                            {patient.status || "Menunggu"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            to={`/perawat/InputPemeriksaan/${patient.no_registrasi}`}
+                          >
+                            <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
+                              </svg>
+                            </button>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                        Tidak ada pasien ditemukan untuk poli Anda
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
           )}
         </div>
 
-        <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
-          <button
-            onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
-            disabled={currentPage === 1}
-            className={`border px-3 py-1.5 text-white rounded-l-lg ${
-              currentPage === 1
-                ? "bg-gray-300 cursor-not-allowed opacity-50"
-                : "bg-[#0099a8] hover:bg-[#007a85]"
-            } transition-colors duration-200`}
-          >
-            Previous
-          </button>
-          {[...Array(totalPages)].map((_, index) => (
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
             <button
-              key={index + 1}
-              onClick={() => handlePageChange(index + 1)}
-              className={`border px-3 py-1.5 ${
-                currentPage === index + 1
-                  ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
-                  : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
+              onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+              disabled={currentPage === 1}
+              className={`border px-3 py-1.5 text-white rounded-l-lg ${
+                currentPage === 1
+                  ? "bg-gray-300 cursor-not-allowed opacity-50"
+                  : "bg-[#0099a8] hover:bg-[#007a85]"
               } transition-colors duration-200`}
             >
-              {index + 1}
+              Previous
             </button>
-          ))}
-          <button
-            onClick={() =>
-              handlePageChange(Math.min(currentPage + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className={`border px-3 py-1.5 text-white rounded-r-lg ${
-              currentPage === totalPages
-                ? "bg-gray-300 cursor-not-allowed opacity-50"
-                : "bg-[#0099a8] hover:bg-[#007a85]"
-            } transition-colors duration-200`}
-          >
-            Next
-          </button>
-        </div>
+            {[...Array(totalPages)].map((_, index) => (
+              <button
+                key={index + 1}
+                onClick={() => handlePageChange(index + 1)}
+                className={`border px-3 py-1.5 ${
+                  currentPage === index + 1
+                    ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
+                    : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
+                } transition-colors duration-200`}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button
+              onClick={() =>
+                handlePageChange(Math.min(currentPage + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className={`border px-3 py-1.5 text-white rounded-r-lg ${
+                currentPage === totalPages
+                  ? "bg-gray-300 cursor-not-allowed opacity-50"
+                  : "bg-[#0099a8] hover:bg-[#007a85]"
+              } transition-colors duration-200`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  Outlet,
 } from "react-router-dom";
 import Login from "./components/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -18,65 +19,64 @@ import ListPasienPerawat from "./components/perawat/ListPasienPerawat";
 import HistoryPerawat from "./components/perawat/HistoryPerawat";
 import InputPemeriksaan from "./components/perawat/InputPemeriksaan";
 
+// Layout kosong dengan Outlet untuk nested route
+const PerawatLayout = () => <Outlet />;
+const DokterLayout = () => <Outlet />;
+
 function App() {
   return (
     <Router>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Protected Dokter Routes */}
         <Route
-          path="/dokter/*"
+          path="/dokter"
           element={
             <ProtectedRoute allowedRoles={["dokter"]}>
-              <Routes>
-                <Route path="Dashboard" element={<DokterDashboard />} />
-                <Route path="listPasien" element={<ListPasien />} />
-                <Route
-                  path="data-pemeriksaan/:id_pasien"
-                  element={<DataPemeriksaan />}
-                />
-                <Route path="diagnosa/:id_pasien" element={<Diagnosa />} />
-                <Route path="resep/:id_pasien" element={<Resep />} />
-                <Route path="history" element={<History />} />
-                <Route
-                  path="akun"
-                  element={<div>Akun Dokter (Coming Soon)</div>}
-                />
-              </Routes>
+              <DokterLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="Dashboard" element={<DokterDashboard />} />
+          <Route path="listPasien" element={<ListPasien />} />
+          <Route
+            path="data-pemeriksaan/:id_pasien"
+            element={<DataPemeriksaan />}
+          />
+          <Route path="diagnosa/:id_pasien" element={<Diagnosa />} />
+          <Route path="resep/:id_pasien" element={<Resep />} />
+          <Route path="history" element={<History />} />
+          <Route path="akun" element={<div>Akun Dokter (Coming Soon)</div>} />
+        </Route>
 
         {/* Protected Perawat Routes */}
         <Route
-          path="/perawat/*"
+          path="/perawat"
           element={
             <ProtectedRoute allowedRoles={["perawat"]}>
-              <Routes>
-                <Route path="DashboardPerawat" element={<DashboardPerawat />} />
-                <Route path="listPasien" element={<ListPasienPerawat />} />
-                <Route
-                  path="inputPemeriksaan/:rm"
-                  element={<InputPemeriksaan />}
-                />
-                <Route path="history" element={<HistoryPerawat />} />
-                <Route
-                  path="detail-history/:id_pasien"
-                  element={<div>Detail History Perawat (Coming Soon)</div>}
-                />
-                <Route
-                  path="akun"
-                  element={<div>Akun Perawat (Coming Soon)</div>}
-                />
-              </Routes>
+              <PerawatLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="DashboardPerawat" element={<DashboardPerawat />} />
+          <Route path="listPasien" element={<ListPasienPerawat />} />
+          <Route path="inputPemeriksaan/:rm" element={<InputPemeriksaan />} />
+          <Route path="history" element={<HistoryPerawat />} />
+          <Route
+            path="detail-history/:id_pasien"
+            element={<div>Detail History Perawat (Coming Soon)</div>}
+          />
+          <Route
+            path="akun"
+            element={<div>Akun Perawat (Coming Soon)</div>}
+          />
+        </Route>
 
-        {/* Redirect root to login */}
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

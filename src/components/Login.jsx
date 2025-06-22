@@ -13,16 +13,16 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Check if user is already logged in
+  // Cek user yang sudah login
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     console.log("Login - Initial user check:", currentUser);
     if (currentUser) {
-      const role = currentUser.user.role.toLowerCase();
+      const role = currentUser.role;
       console.log("Login - User already logged in with role:", role);
-      if (role === "dokter") {
+      if (role === 3) {
         navigate("/dokter/Dashboard");
-      } else if (role === "perawat") {
+      } else if (role === 2) {
         navigate("/perawat/DashboardPerawat");
       }
     }
@@ -49,16 +49,16 @@ const Login = () => {
       );
       console.log("Login - Response received:", response);
 
-      if (response.success) {
-        const user = response.data.user;
-        const role = user.role.toLowerCase();
-        console.log("Login - User role (normalized):", role);
+      if (response.access_token) {
+        const user = response.user || response.data?.user; // untuk jaga-jaga
+        const role = user.role;
+        console.log("Login - User role:", role);
 
-        // Redirect based on role
-        if (role === "dokter") {
+        // Redirect berdasarkan role
+        if (role === 3) {
           console.log("Login - Navigating to dokter dashboard...");
           navigate("/dokter/Dashboard", { replace: true });
-        } else if (role === "perawat") {
+        } else if (role === 2 || role === 4) {
           console.log("Login - Navigating to perawat dashboard...");
           navigate("/perawat/DashboardPerawat", { replace: true });
         }

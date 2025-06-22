@@ -16,76 +16,174 @@ const ListPasien = () => {
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    const storedData = localStorage.getItem("user");
-    if (storedData) {
-      const userData = JSON.parse(storedData);
-      if (userData.user && userData.user.nama_lengkap) {
-        setDoctorName(userData.user.nama_lengkap);
+  // ===== FUNGSI HELPER =====
+  /**
+   * Fungsi untuk mengambil nilai dari objek yang kompleks/nested
+   * Berguna karena data dari API bisa punya struktur yang berbeda-beda
+   */
+  const getValueFromNestedObject = (obj, paths) => {
+    for (const path of paths) {
+      const keys = path.split('.');
+      let value = obj;
+      
+      for (const key of keys) {
+        value = value?.[key];
+        if (!value) break;
       }
-      if (userData.poli) {
-        setPoliName(userData.poli.nama_poli.toUpperCase());
-      }
-    } else {
-      navigate("/");
+      
+      if (value) return value;
     }
+    return null;
+  };
+
+  /**
+   * Fungsi untuk mengambil data dokter dari API eksternal
+   * Digunakan sebagai fallback jika data tidak lengkap di localStorage
+   */
+  const fetchDoctorDataFromAPI = async (userData) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const response = await fetch("https://ti054a01.agussbn.my.id/api/dokter", {
+        headers: {
+          Authorization: token,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) return;
+
+      const data = await response.json();
+      if (!data.data || !Array.isArray(data.data)) return;
+
+      // Cari dokter yang sesuai dengan user yang login
+      const doctorId = getValueFromNestedObject(userData, ['id_dokter', 'id', 'user_id', 'id_user']);
+      let currentDoctor = null;
+
+      // Cari berdasarkan ID
+      if (doctorId) {
+        currentDoctor = data.data.find(doctor => 
+          [doctor.id_dokter, doctor.id, doctor.id_user].includes(doctorId)
+        );
+      }
+
+      // Jika tidak ketemu berdasarkan ID, cari berdasarkan nama atau ambil yang pertama
+      if (!currentDoctor) {
+        currentDoctor = doctorName 
+          ? data.data.find(doctor => doctor.nama_dokter === doctorName)
+          : data.data[0];
+      }
+
+      // Update state jika menemukan data dokter
+      if (currentDoctor) {
+        if (!doctorName && currentDoctor.nama_dokter) {
+          setDoctorName(currentDoctor.nama_dokter);
+        }
+        if (currentDoctor.spesialis) {
+          setPoliName(currentDoctor.spesialis.toUpperCase());
+        }
+      }
+    } catch (error) {
+      console.error("Error saat mengambil data dokter dari API:", error);
+    }
+  };
+
+  // ===== EFFECT UNTUK INISIALISASI DATA USER =====
+  useEffect(() => {
+    const initializeUserData = async () => {
+      const storedData = localStorage.getItem("user");
+      
+      if (!storedData) {
+        navigate("/");
+        return;
+      }
+
+      try {
+        const userData = JSON.parse(storedData);
+        
+        // === AMBIL NAMA DOKTER ===
+        const doctorNamePossibleFields = [
+          'nama_dokter', 'nama_lengkap', 'name', 'full_name', 
+          'user.nama_lengkap', 'user.nama_dokter'
+        ];
+        const foundDoctorName = getValueFromNestedObject(userData, doctorNamePossibleFields);
+        if (foundDoctorName) setDoctorName(foundDoctorName);
+
+        // === AMBIL NAMA POLI/SPESIALIS ===
+        const poliNamePossibleFields = [
+          'spesialis', 'nama_poli', 'poli_name', 'department',
+          'poli.nama_poli', 'user.spesialis', 'user.poli.nama_poli'
+        ];
+        const foundPoliName = getValueFromNestedObject(userData, poliNamePossibleFields);
+        
+        if (foundPoliName) {
+          setPoliName(foundPoliName.toUpperCase());
+        } else {
+          // Jika tidak ada di localStorage, coba ambil dari API
+          await fetchDoctorDataFromAPI(userData);
+        }
+
+      } catch (error) {
+        console.error("Error saat parsing data user:", error);
+        navigate("/");
+      }
+    };
+
+    initializeUserData();
   }, [navigate]);
 
-const fetchPatients = async (page = 1, search = "") => {
-  try {
-    setLoading(true);
-    setError(null);
+  // ===== EFFECT UNTUK FETCH PATIENTS =====
+  const fetchPatients = async (page = 1, search = "") => {
+    try {
+      setLoading(true);
+      setError(null);
 
-    const token = "5|cLspys0H4S5EKbC4b6xwxmUx7GsXpIMeBkXWZEfmee7f7e4f";
-    const params = new URLSearchParams({
-      page: page.toString(),
-      search: search,
-    });
+      const params = new URLSearchParams({
+        page: page.toString(),
+        search: search,
+      });
 
-    const url = `${API_URL}/api/pasiens?${params}`;
-    console.log("Fetching:", url);
+      const url = `${API_URL}/api/pasien?${params}`;
+      console.log("Fetching:", url);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    });
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      });
 
-    console.log("Status:", response.status);
+      console.log("Status:", response.status);
 
-    // 👉 hanya ini, jangan ada response.text()
-    if (!response.ok) {
-      throw new Error("Gagal mengambil data pasien");
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data pasien");
+      }
+
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      if (data.data && Array.isArray(data.data)) {
+        setPatients(data.data);
+        
+        const totalPages = data.meta?.last_page || Math.ceil(data.data.length / 10) || 1;
+        setTotalPages(totalPages);
+      } else {
+        throw new Error("Data pasien kosong atau format tidak sesuai");
+      }
+    } catch (err) {
+      console.error("Error details:", err);
+      setError(err.message);
+      setPatients([]);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json(); // ✅ Hanya baca 1x
-
-    // Karena data kamu berupa object langsung (bukan { status: "success", data: ... }),
-    // Maka langsung proses seperti ini:
-    if (data.data) {
-      setPatients(data.data);
-      const totalPages = Math.ceil((data.meta?.total || data.data.length) / (data.meta?.per_page || 10));
-      setTotalPages(totalPages);
-    } else {
-      throw new Error("Data pasien kosong atau format tidak sesuai");
-    }
-  } catch (err) {
-    console.error("Error details:", err);
-    setError(err.message);
-    setPatients([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
-    if (poliName) {
-      fetchPatients(currentPage, searchQuery);
-    }
-  }, [currentPage, searchQuery, poliName]);
+    fetchPatients(currentPage, searchQuery);
+  }, [currentPage, searchQuery]);
 
   const handleSearch = (value) => {
     setSearchQuery(value);
@@ -99,10 +197,8 @@ const fetchPatients = async (page = 1, search = "") => {
   };
 
   const getStatusColor = (status) => {
-    // Return default style if status is null or undefined
     if (!status) return "bg-gray-100 text-gray-800";
 
-    // Safely convert to lowercase, using empty string as fallback
     const normalizedStatus = (status || "").toLowerCase();
 
     switch (normalizedStatus) {
@@ -259,9 +355,9 @@ const fetchPatients = async (page = 1, search = "") => {
           <div>
             <h1 className="text-lg font-bold text-black">
               PASIEN RAWAT JALAN{" "}
-              <span className="font-normal">({poliName})</span>
+              <span className="font-normal">({poliName || "Loading..."})</span>
             </h1>
-            <p className="text-sm text-gray-600 mt-1">Halo, {doctorName}</p>
+            <p className="text-sm text-gray-600 mt-1">Halo, {doctorName || "Loading..."}</p>
           </div>
           <img
             src="/simrs.png"
@@ -310,7 +406,7 @@ const fetchPatients = async (page = 1, search = "") => {
               <input
                 id="search"
                 type="text"
-                placeholder="Cari berdasarkan nama pasien atau nomor registrasi..."
+                placeholder="Cari berdasarkan nama pasien atau nomor RM..."
                 className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none"
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
@@ -359,69 +455,68 @@ const fetchPatients = async (page = 1, search = "") => {
               <table className="min-w-full bg-white">
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
-                    <th className="px-4 py-3 font-medium text-left">No rm</th>
-                    <th className="px-4 py-3 font-medium text-left">Antrian</th>
+                    <th className="px-4 py-3 font-medium text-left">No RM</th>
+                    <th className="px-4 py-3 font-medium text-left">NIK</th>
                     <th className="px-4 py-3 font-medium text-left">Nama</th>
+                    <th className="px-4 py-3 font-medium text-left">Jenis Kelamin</th>
+                    <th className="px-4 py-3 font-medium text-left">Umur</th>
                     <th className="px-4 py-3 font-medium text-left">Status</th>
                     <th className="px-4 py-3 font-medium text-left">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm divide-y divide-gray-200">
-                  {patients.map((patient) => (
-                    <tr
-                      key={patient.id_pasien}
-                      className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
-                    >
-                      <td className="px-4 py-3">{patient.rm}</td>
-                      <td className="px-4 py-3">{patient.no_antrian}</td>
-                      <td className="px-4 py-3">{patient.nama_pasien}</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                            patient.current_status
-                          )}`}
+                  {patients.length > 0 ? (
+                    patients.map((patient, index) => {
+                      const birthDate = new Date(patient.tgl_lahir);
+                      const today = new Date();
+                      const age = today.getFullYear() - birthDate.getFullYear();
+                      
+                      return (
+                        <tr
+                          key={patient.rm || index}
+                          className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
                         >
-                          {patient.current_status || "Menunggu"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {patient.current_status?.toLowerCase() ===
-                        "menunggu" ? (
-                          <button
-                            disabled
-                            className="text-gray-400 cursor-not-allowed p-1.5 rounded-full transition-colors duration-200 bg-transparent"
-                            title="Menunggu pemeriksaan perawat"
-                          >
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              viewBox="0 0 24 24"
+                          <td className="px-4 py-3">{patient.rm}</td>
+                          <td className="px-4 py-3">{patient.nik}</td>
+                          <td className="px-4 py-3">{patient.nama_pasien}</td>
+                          <td className="px-4 py-3 capitalize">{patient.jns_kelamin}</td>
+                          <td className="px-4 py-3">{age} tahun</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+                                patient.current_status || "Menunggu"
+                              )}`}
                             >
-                              <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
-                            </svg>
-                          </button>
-                        ) : (
-                          <Link
-                            to={`/dokter/data-pemeriksaan/${patient.rm}`}
-                          >
-                            <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
-                              </svg>
-                            </button>
-                          </Link>
-                        )}
+                              {patient.current_status || "Menunggu"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Link
+                              to={`/dokter/data-pemeriksaan/${patient.rm}`}
+                            >
+                              <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
+                                </svg>
+                              </button>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
+                        Tidak ada data pasien
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -429,50 +524,51 @@ const fetchPatients = async (page = 1, search = "") => {
         </div>
 
         {/* Pagination */}
-        <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
-          <button
-            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-            disabled={currentPage === 1}
-            className={`border px-3 py-1.5 text-white rounded-l-lg ${
-              currentPage === 1
-                ? "bg-gray-300 cursor-not-allowed opacity-50"
-                : "bg-[#0099a8] hover:bg-[#007a85]"
-            } transition-colors duration-200`}
-          >
-            Previous
-          </button>
-          {[...Array(totalPages)].map((_, index) => (
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
             <button
-              key={index + 1}
-              onClick={() => setCurrentPage(index + 1)}
-              className={`border px-3 py-1.5 ${
-                currentPage === index + 1
-                  ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
-                  : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`border px-3 py-1.5 text-white rounded-l-lg ${
+                currentPage === 1
+                  ? "bg-gray-300 cursor-not-allowed opacity-50"
+                  : "bg-[#0099a8] hover:bg-[#007a85]"
               } transition-colors duration-200`}
             >
-              {index + 1}
+              Previous
             </button>
-          ))}
-          <button
-            onClick={() =>
-              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-            }
-            disabled={currentPage === totalPages}
-            className={`border px-3 py-1.5 text-white rounded-r-lg ${
-              currentPage === totalPages
-                ? "bg-gray-300 cursor-not-allowed opacity-50"
-                : "bg-[#0099a8] hover:bg-[#007a85]"
-            } transition-colors duration-200`}
-          >
-            Next
-          </button>
-        </div>
+            {[...Array(totalPages)].map((_, index) => (
+              <button
+                key={index + 1}
+                onClick={() => setCurrentPage(index + 1)}
+                className={`border px-3 py-1.5 ${
+                  currentPage === index + 1
+                    ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
+                    : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
+                } transition-colors duration-200`}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
+              disabled={currentPage === totalPages}
+              className={`border px-3 py-1.5 text-white rounded-r-lg ${
+                currentPage === totalPages
+                  ? "bg-gray-300 cursor-not-allowed opacity-50"
+                  : "bg-[#0099a8] hover:bg-[#007a85]"
+              } transition-colors duration-200`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
 };
 
 export default ListPasien;
-
 

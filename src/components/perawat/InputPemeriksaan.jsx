@@ -500,7 +500,7 @@ const Sidebar = ({ onLogout }) => {
       label: "Dashboard",
     },
     {
-      to: "/perawat/list-pasien",
+      to: "/perawat/listPasien",
       icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11 a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159 c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9",
       label: "Data Pasien",
       active: true,
@@ -789,7 +789,7 @@ console.log("Token yang digunakan:", token);
 
       if (response.data.status === "success") {
         alert("Data pemeriksaan berhasil disimpan!");
-        navigate("/perawat/list-pasien");
+        navigate("/perawat/listPasien");
       } else {
         throw new Error(
           response.data.message || "Gagal menyimpan data pemeriksaan"
@@ -813,10 +813,10 @@ console.log("Token yang digunakan:", token);
           "Apakah Anda yakin ingin membatalkan? Data yang telah diisi akan hilang."
         )
       ) {
-        navigate("/perawat/list-pasien");
+        navigate("/perawat/listPasien");
       }
     } else {
-      navigate("/perawat/list-pasien");
+      navigate("/perawat/listPasien");
     }
   };
 
@@ -837,7 +837,7 @@ console.log("Token yang digunakan:", token);
         <div className="text-center py-4">
           <div className="text-red-500 mb-4">{error}</div>
           <button
-            onClick={() => navigate("/perawat/list-pasien")}
+            onClick={() => navigate("/perawat/listPasien")}
             className="bg-[#0099a8] text-white px-4 py-2 rounded-xl hover:bg-[#007a85] transition-colors duration-200"
           >
             Kembali ke List Pasien

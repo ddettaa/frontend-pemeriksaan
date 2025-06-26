@@ -52,32 +52,32 @@ const DataPemeriksaan = () => {
 
         console.log("API Response:", response.data);
 
-        if (response.data.status === "success" && response.data.data) {
-          const data = response.data.data;
+    if (response.data.status === "success" && response.data.data) {
+  const data = response.data.data;
+  const pemeriksaan = data.pemeriksaan;
 
-          // Use current date since we don't have created_at
-          const tanggal = new Date().toLocaleDateString("id-ID", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
+  const tanggal = new Date().toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
-          setPemeriksaanData({
-            no_reg: data.no_registrasi,
-            nama: data.pasien?.nama_pasien || "Tidak ada nama",
-            jenis_kelamin: convertGender(data.pasien?.jenis_kelamin) || "-",
-            suhu: data.suhu ? (data.suhu / 10).toFixed(1) : "-", // Konversi dari 365 ke 36.5
-            tensi: data.tensi || "-",
-            tinggi_badan: data.tinggi_badan || "-",
-            berat_badan: data.berat_badan || "-",
-            keluhan: data.keluhan || "-",
-            tanggal: tanggal,
-          });
-        } else {
-          throw new Error(
-            response.data.message || "Data pemeriksaan tidak ditemukan"
-          );
-        }
+  setPemeriksaanData({
+    no_reg: pemeriksaan.no_registrasi,
+    nama: data.pasien?.nama_pasien || "Tidak ada nama",
+    jenis_kelamin: convertGender(data.pasien?.jenis_kelamin) || "-",
+    suhu: pemeriksaan.suhu ? (pemeriksaan.suhu / 10).toFixed(1) : "-",
+    tensi: pemeriksaan.tensi || "-",
+    tinggi_badan: pemeriksaan.tinggi_badan || "-",
+    berat_badan: pemeriksaan.berat_badan || "-",
+    keluhan: pemeriksaan.keluhan || "-",
+    tanggal: tanggal,
+  });
+} else {
+  throw new Error(
+    response.data.message || "Data pemeriksaan tidak ditemukan"
+  );
+}
       } catch (err) {
         console.error("Error fetching examination data:", err);
         setError(

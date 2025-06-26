@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, Fragment, useEffect } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
-const API_URL = "https://ti054a01.agussbn.my.id"; // Hardcoded API URL
+const API_URL = "https://ti054a02.agussbn.my.id"; // Hardcoded API URL
 
 const ListPasien = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +15,7 @@ const ListPasien = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
+  const [allPatients, setAllPatients] = useState([]);
 
   // ===== FUNGSI HELPER =====
   /**
@@ -45,7 +46,7 @@ const ListPasien = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await fetch("https://ti054a01.agussbn.my.id/api/dokter", {
+      const response = await fetch("https://ti054a02.agussbn.my.id/api/dokter", {
         headers: {
           Authorization: token,
           "Content-Type": "application/json",
@@ -134,56 +135,73 @@ const ListPasien = () => {
   }, [navigate]);
 
   // ===== EFFECT UNTUK FETCH PATIENTS =====
-  const fetchPatients = async (page = 1, search = "") => {
-    try {
-      setLoading(true);
-      setError(null);
+  const fetchPatients = async () => {
+  try {
+    setLoading(true);
+    setError(null);
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        search: search,
-      });
+    const url = `${API_URL}/api/pemeriksaan`;
+    const token = localStorage.getItem("token");
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
 
-      const url = `${API_URL}/api/pasien?${params}`;
-      console.log("Fetching:", url);
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Status:", response.status);
-
-      if (!response.ok) {
-        throw new Error("Gagal mengambil data pasien");
-      }
-
-      const data = await response.json();
-      console.log("Response data:", data);
-
-      if (data.data && Array.isArray(data.data)) {
-        setPatients(data.data);
-        
-        const totalPages = data.meta?.last_page || Math.ceil(data.data.length / 10) || 1;
-        setTotalPages(totalPages);
-      } else {
-        throw new Error("Data pasien kosong atau format tidak sesuai");
-      }
-    } catch (err) {
-      console.error("Error details:", err);
-      setError(err.message);
-      setPatients([]);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error("Gagal mengambil data pasien");
     }
-  };
+
+    const data = await response.json();
+    if (data.data && Array.isArray(data.data)) {
+      const mappedPatients = data.data.map(item => ({
+        no_antrian: item.pasien?.no_antrian ?? "",
+        no_registrasi: item.pasien?.no_registrasi ?? "",
+        rm: item.pasien?.rm ?? "",
+        nama_pasien: item.pasien?.nama_pasien ?? "",
+        nama_poli: item.pasien?.nama_poli ?? "",
+        nama_dokter: item.pasien?.nama_dokter ?? "",
+        status: item.pasien?.status,
+      }));
+      setAllPatients(mappedPatients);
+    } else {
+      setAllPatients([]);
+      throw new Error("Data pasien kosong atau format tidak sesuai");
+    }
+  } catch (err) {
+    setError(err.message);
+    setAllPatients([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
-    fetchPatients(currentPage, searchQuery);
-  }, [currentPage, searchQuery]);
+  fetchPatients();
+}, []);
+
+useEffect(() => {
+  let filtered = allPatients;
+  if (searchQuery.trim()) {
+    filtered = filtered.filter(
+      (p) =>
+        p.nama_pasien?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.rm?.toString().includes(searchQuery)
+    );
+  }
+
+  const itemsPerPage = 10;
+  const totalItems = filtered.length;
+  const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  setTotalPages(calculatedTotalPages);
+
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  setPatients(filtered.slice(startIndex, endIndex));
+}, [allPatients, searchQuery, currentPage]);
 
   const handleSearch = (value) => {
     setSearchQuery(value);
@@ -454,70 +472,64 @@ const ListPasien = () => {
             <div className="border border-gray-300 rounded-xl overflow-hidden shadow-sm">
               <table className="min-w-full bg-white">
                 <thead>
-                  <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
-                    <th className="px-4 py-3 font-medium text-left">No RM</th>
-                    <th className="px-4 py-3 font-medium text-left">NIK</th>
-                    <th className="px-4 py-3 font-medium text-left">Nama</th>
-                    <th className="px-4 py-3 font-medium text-left">Jenis Kelamin</th>
-                    <th className="px-4 py-3 font-medium text-left">Umur</th>
-                    <th className="px-4 py-3 font-medium text-left">Status</th>
-                    <th className="px-4 py-3 font-medium text-left">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm divide-y divide-gray-200">
-                  {patients.length > 0 ? (
-                    patients.map((patient, index) => {
-                      const birthDate = new Date(patient.tgl_lahir);
-                      const today = new Date();
-                      const age = today.getFullYear() - birthDate.getFullYear();
-                      
-                      return (
-                        <tr
-                          key={patient.rm || index}
-                          className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
-                        >
-                          <td className="px-4 py-3">{patient.rm}</td>
-                          <td className="px-4 py-3">{patient.nik}</td>
-                          <td className="px-4 py-3">{patient.nama_pasien}</td>
-                          <td className="px-4 py-3 capitalize">{patient.jns_kelamin}</td>
-                          <td className="px-4 py-3">{age} tahun</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                                patient.current_status || "Menunggu"
-                              )}`}
-                            >
-                              {patient.current_status || "Menunggu"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Link
-                              to={`/dokter/data-pemeriksaan/${patient.rm}`}
-                            >
-                              <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
-                                <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
-                                </svg>
-                              </button>
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                        Tidak ada data pasien
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+  <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
+    <th className="px-4 py-3 font-medium text-left">Antrian</th>
+    <th className="px-4 py-3 font-medium text-left">No Registrasi</th>
+    <th className="px-4 py-3 font-medium text-left">No RM</th>
+    <th className="px-4 py-3 font-medium text-left">Nama</th>
+    <th className="px-4 py-3 font-medium text-left">Poli</th>
+    <th className="px-4 py-3 font-medium text-left">Dokter</th>
+    <th className="px-4 py-3 font-medium text-left">Status</th>
+    <th className="px-4 py-3 font-medium text-left">Aksi</th>
+  </tr>
+</thead>
+<tbody className="text-sm divide-y divide-gray-200">
+  {patients.length > 0 ? (
+    patients.map((patient) => (
+      <tr
+        key={patient.no_registrasi}
+        className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
+      >
+        <td className="px-4 py-3">{patient.no_antrian}</td>
+        <td className="px-4 py-3">{patient.no_registrasi}</td>
+        <td className="px-4 py-3">{patient.rm}</td>
+        <td className="px-4 py-3">{patient.nama_pasien}</td>
+        <td className="px-4 py-3">{patient.nama_poli}</td>
+        <td className="px-4 py-3">{patient.nama_dokter}</td>
+        <td className="px-4 py-3">
+          <span
+            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
+              patient.status
+            )}`}
+          >
+            {patient.status || "Menunggu"}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <Link to={`/dokter/data-pemeriksaan/${patient.no_registrasi}`}>
+            <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
+              </svg>
+            </button>
+          </Link>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+        Tidak ada data pasien
+      </td>
+    </tr>
+  )}
+</tbody>
               </table>
             </div>
           )}

@@ -83,7 +83,7 @@ const usePatientData = (no_registrasi) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { checkAuth } = useAuth();
-  const navigate = useNavigate();
+
 
   useEffect(() => {
     let isCancelled = false; // Flag for cleanup
@@ -195,17 +195,17 @@ const usePatientData = (no_registrasi) => {
 };
 
 // Utility functions
-const handleApiError = (err, navigate) => {
-  if (err.response?.status === 401) {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    } catch (error) {
-      console.error("Error clearing localStorage:", error);
-    }
-    navigate("/");
-  }
-};
+// const handleApiError = (err, navigate) => {
+//   if (err.response?.status === 401) {
+//     try {
+//       localStorage.removeItem("token");
+//       localStorage.removeItem("user");
+//     } catch (error) {
+//       console.error("Error clearing localStorage:", error);
+//     }
+//     navigate("/");
+//   }
+// };
 
 const validateNumericInput = (value, name) => {
   if (name === "tensi") {

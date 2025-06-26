@@ -1,65 +1,70 @@
 import axios from "axios";
 
-const API_URL = "https://ti054a01.agussbn.my.id/api";
+// Configure axios instance
+const api = axios.create({
+  baseURL: "https://ti054a02.agussbn.my.id",
+  withCredentials: true,
+  headers: {
+    "X-Requested-With": "XMLHttpRequest",
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  },
+});
 
-const login = async (email, password) => {
-  try {
-    console.log("Attempting login with:", { email });
-    const response = await axios.post(`${API_URL}/login`, { email, password });
+const authService = {
+  async login(credentials) {
+    try {
+      console.log("Attempting login with:", credentials);
 
-    console.log("Raw API Response:", response);
+      // Get CSRF token first
+      console.log("Fetching CSRF cookie...");
+      const csrfResponse = await api.get("/sanctum/csrf-cookie");
+      console.log("CSRF cookie response:", csrfResponse.status);
 
-    const userData = response.data;
-    console.log("User data received from API:", userData);
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Simpan seluruh user object ke localStorage
-    // userData.user berisi informasi user lengkap termasuk poli
-    localStorage.setItem("user", JSON.stringify(userData.user));
-    localStorage.setItem("token", `${userData.token_type} ${userData.access_token}`);
+      // Login request
+      console.log("Making login request...");
+      const response = await api.post("/api/login", credentials);
+      console.log("Login successful:", response.data);
 
-    console.log("Data saved to localStorage:");
-    console.log("User:", JSON.stringify(userData.user));
-    console.log("Token:", `${userData.token_type} ${userData.access_token}`);
+      const loginData = response.data.data; // seluruh objek data
+      localStorage.setItem("user", JSON.stringify(loginData));
+      localStorage.setItem("token", loginData.token);
 
-    return userData;
-  } catch (error) {
-    console.error("Login error details:", error.response || error);
-    throw error.response?.data || {
-      success: false,
-      message: "Terjadi kesalahan pada server",
-    };
-  }
-};
-
-const logout = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    if (token) {
-      await axios.post(`${API_URL}/logout`, {}, {
-        headers: { Authorization: token },
-      });
+      return loginData;
+    } catch (error) {
+      console.error("Login error details:", error.response || error);
+      throw error;
     }
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-  } catch (error) {
-    console.error("Logout error:", error);
-    // Tetap hapus data lokal meskipun API gagal
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-  }
+  },
+
+  async logout() {
+    try {
+      await api.post("/api/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
+    } finally {
+      // ✅ Bersihkan localStorage saat logout
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+    }
+  },
+
+  // ✅ Ambil dari localStorage agar tidak perlu async/await
+  getCurrentUser() {
+    try {
+      const userStr = localStorage.getItem("user");
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  getToken() {
+    return localStorage.getItem("token");
+  },
 };
 
-const getCurrentUser = () => {
-  try {
-    const userStr = localStorage.getItem("user");
-    const user = userStr ? JSON.parse(userStr) : null;
-    console.log("getCurrentUser - Retrieved user:", user);
-    return user;
-  } catch (error) {
-    console.error("Error getting current user:", error);
-    return null;
-  }
-};
-
-const authService = { login, logout, getCurrentUser };
 export default authService;

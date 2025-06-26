@@ -20,15 +20,15 @@ const ListPasienPerawat = () => {
   useEffect(() => {
     const storedData = localStorage.getItem("user");
     console.log("Stored user data:", storedData); // Debug log
-    
+
     if (storedData) {
       try {
         const userData = JSON.parse(storedData);
         console.log("Parsed user data:", userData); // Debug log
-        
+
         // Check different possible structures for user data
         let userName = "";
-        
+
         // Try different possible paths for user name
         if (userData.user && userData.user.nama_lengkap) {
           userName = userData.user.nama_lengkap;
@@ -39,11 +39,10 @@ const ListPasienPerawat = () => {
         } else if (userData.name) {
           userName = userData.name;
         }
-        
+
         console.log("Extracted userName:", userName); // Debug log
-        
+
         setNurseName(userName || "Perawat");
-        
       } catch (error) {
         console.error("Error parsing user data:", error);
         setNurseName("Perawat");
@@ -65,7 +64,6 @@ const ListPasienPerawat = () => {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        mode: "cors",
       });
 
       if (!response.ok) {
@@ -77,13 +75,13 @@ const ListPasienPerawat = () => {
 
       if (data && Array.isArray(data.data)) {
         let filteredPatients = data.data;
-        
+
         // Filter by nurse's poli if nursePoliName is available
         const storedData = localStorage.getItem("user");
         if (storedData) {
           try {
             const userData = JSON.parse(storedData);
-            
+
             // Try to get poli name from different possible paths
             let userPoliName = "";
             if (userData.user && userData.user.poli_name) {
@@ -99,12 +97,12 @@ const ListPasienPerawat = () => {
             } else if (userData.poli) {
               userPoliName = userData.poli;
             }
-            
+
             console.log("Filtering by poli:", userPoliName); // Debug log
-            
+
             if (userPoliName) {
-              filteredPatients = data.data.filter(patient => 
-                patient.nama_poli === userPoliName
+              filteredPatients = data.data.filter(
+                (patient) => patient.nama_poli === userPoliName
               );
             }
           } catch (error) {
@@ -114,9 +112,12 @@ const ListPasienPerawat = () => {
 
         // Apply search filter if searchQuery exists
         if (searchQuery.trim()) {
-          filteredPatients = filteredPatients.filter(patient =>
-            patient.nama_pasien.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            patient.rm.toString().includes(searchQuery)
+          filteredPatients = filteredPatients.filter(
+            (patient) =>
+              patient.nama_pasien
+                .toLowerCase()
+                .includes(searchQuery.toLowerCase()) ||
+              patient.rm.toString().includes(searchQuery)
           );
         }
 
@@ -125,21 +126,20 @@ const ListPasienPerawat = () => {
         const totalItems = filteredPatients.length;
         const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
         setTotalPages(calculatedTotalPages);
-        
+
         // Get current page data
         const startIndex = (currentPage - 1) * itemsPerPage;
         const endIndex = startIndex + itemsPerPage;
         const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
-        
+
         setPatients(paginatedPatients);
-        
+
         console.log("Total patients:", totalItems); // Debug log
         console.log("Current page patients:", paginatedPatients.length); // Debug log
       } else {
         setPatients([]);
         throw new Error("Format data tidak sesuai");
       }
-
     } catch (err) {
       setError(err.message);
       setPatients([]);
@@ -335,9 +335,7 @@ const ListPasienPerawat = () => {
       <main className="flex-1 p-8 overflow-auto">
         <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-lg font-bold text-black">
-              PASIEN RAWAT JALAN
-            </h1>
+            <h1 className="text-lg font-bold text-black">PASIEN RAWAT JALAN</h1>
             <p className="text-sm text-gray-600 mt-1">
               Halo, nurse {nurseName}
             </p>
@@ -437,7 +435,9 @@ const ListPasienPerawat = () => {
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
                     <th className="px-4 py-3 font-medium text-left">Antrian</th>
-                    <th className="px-4 py-3 font-medium text-left">No Registrasi</th>
+                    <th className="px-4 py-3 font-medium text-left">
+                      No Registrasi
+                    </th>
                     <th className="px-4 py-3 font-medium text-left">No RM</th>
                     <th className="px-4 py-3 font-medium text-left">Nama</th>
                     <th className="px-4 py-3 font-medium text-left">Poli</th>
@@ -489,7 +489,10 @@ const ListPasienPerawat = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                      <td
+                        colSpan="8"
+                        className="px-4 py-8 text-center text-gray-500"
+                      >
                         Tidak ada pasien ditemukan untuk poli Anda
                       </td>
                     </tr>

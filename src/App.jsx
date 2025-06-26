@@ -63,16 +63,16 @@ function App() {
         >
           <Route path="DashboardPerawat" element={<DashboardPerawat />} />
           <Route path="listPasien" element={<ListPasienPerawat />} />
-          <Route path="inputPemeriksaan/:rm" element={<InputPemeriksaan />} />
+          <Route
+            path="InputPemeriksaan/:no_registrasi"
+            element={<InputPemeriksaan />}
+          />
           <Route path="history" element={<HistoryPerawat />} />
           <Route
             path="detail-history/:id_pasien"
             element={<div>Detail History Perawat (Coming Soon)</div>}
           />
-          <Route
-            path="akun"
-            element={<div>Akun Perawat (Coming Soon)</div>}
-          />
+          <Route path="akun" element={<div>Akun Perawat (Coming Soon)</div>} />
         </Route>
 
         {/* Fallback route */}

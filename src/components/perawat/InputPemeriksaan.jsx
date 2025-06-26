@@ -1,19 +1,22 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect, Fragment } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect, Fragment, useMemo } from "react";
 import { Menu, Transition } from "@headlessui/react";
 import { Dialog } from "@headlessui/react";
 import axios from "axios";
 
 // Constants
-const API_URL = import.meta.env.VITE_API_URL || "https://ti054a01.agussbn.my.id";
+const API_URL = "https://ti054a01.agussbn.my.id";
 const PEMERIKSAAN_API_URL = "https://ti054a02.agussbn.my.id/api/pemeriksaan";
+
+console.log("Environment VITE_API_URL:", import.meta.env.VITE_API_URL);
+console.log("Final API_URL:", API_URL);
 
 // Fixed validation rules
 const VALIDATION_RULES = {
   suhu: { min: 35, max: 45, label: "35-45°C" }, // Fixed: was 350-450
   tinggiBadan: { min: 30, max: 300, label: "30-300 cm" },
   beratBadan: { min: 1, max: 500, label: "1-500 kg" },
-  tensiPattern: /^\d{2,3}\/\d{2,3}$/ // Fixed: more strict pattern
+  tensiPattern: /^\d{2,3}\/\d{2,3}$/, // Fixed: more strict pattern
 };
 
 // Initial form state
@@ -34,14 +37,14 @@ const INITIAL_PATIENT_DATA = {
 // Custom hooks
 const useAuth = () => {
   const navigate = useNavigate();
-  
+
   const getAuthData = () => {
     try {
       const userDataString = localStorage.getItem("user");
       if (!userDataString) {
         return { userData: {} };
       }
-      
+
       const userData = JSON.parse(userDataString);
       return { userData: userData || {} };
     } catch (error) {
@@ -84,10 +87,10 @@ const usePatientData = (no_registrasi) => {
 
   useEffect(() => {
     let isCancelled = false; // Flag for cleanup
-    
+
     const fetchPatientData = async () => {
       console.log("Fetching patient data for no_registrasi:", no_registrasi);
-      
+
       if (!no_registrasi) {
         if (!isCancelled) {
           setError("Nomor registrasi tidak valid");
@@ -95,7 +98,7 @@ const usePatientData = (no_registrasi) => {
         }
         return;
       }
-      
+
       if (!checkAuth()) {
         if (!isCancelled) setIsLoading(false);
         return;
@@ -107,14 +110,20 @@ const usePatientData = (no_registrasi) => {
           setError(null);
         }
 
-        const response = await fetch(`${API_URL}/api/pendaftaran`, {
+        const fullUrl = `${API_URL}/api/pendaftaran`;
+        console.log("API_URL constant:", API_URL);
+        console.log("Full URL being fetched:", fullUrl);
+
+        const response = await fetch(fullUrl, {
           method: "GET",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
           },
-          mode: "cors",
         });
+
+        console.log("Response status:", response.status);
+        console.log("Response headers:", response.headers);
 
         if (isCancelled) return; // Don't update state if component unmounted
 
@@ -126,14 +135,38 @@ const usePatientData = (no_registrasi) => {
         console.log("API Response:", data);
 
         if (data && Array.isArray(data.data)) {
-          const patient = data.data.find(p => p.no_registrasi === no_registrasi);
-          
+          console.log(
+            "Searching for no_registrasi:",
+            no_registrasi,
+            "Type:",
+            typeof no_registrasi
+          );
+          console.log(
+            "Available no_registrasi values:",
+            data.data.map((p) => ({
+              value: p.no_registrasi,
+              type: typeof p.no_registrasi,
+            }))
+          );
+
+          const patient = data.data.find(
+            (p) => String(p.no_registrasi) === String(no_registrasi)
+          );
+
+          console.log("Found patient:", patient);
+
           if (patient) {
-            setPatientData({
-              rm: patient.rm || "",
-              nama: patient.nama_pasien || "",
-              no_registrasi: patient.no_registrasi || "",
-            });
+            if (!isCancelled) {
+              console.log(
+                "Setting patient data and setting isLoading to false"
+              );
+              setPatientData({
+                rm: patient.rm || "",
+                nama: patient.nama_pasien || "",
+                no_registrasi: patient.no_registrasi || "",
+              });
+              setIsLoading(false);
+            }
           } else {
             throw new Error("Data pasien tidak ditemukan");
           }
@@ -144,21 +177,19 @@ const usePatientData = (no_registrasi) => {
         if (!isCancelled) {
           console.error("Error fetching patient data:", err);
           setError(err.message || "Gagal mengambil data pasien");
-        }
-      } finally {
-        if (!isCancelled) {
+          console.log("Setting error and setting isLoading to false");
           setIsLoading(false);
         }
       }
     };
 
     fetchPatientData();
-    
+
     // Cleanup function
     return () => {
       isCancelled = true;
     };
-  }, [no_registrasi, checkAuth, navigate]);
+  }, [no_registrasi]); // Remove checkAuth and navigate from dependencies
 
   return { patientData, isLoading, error };
 };
@@ -179,7 +210,10 @@ const handleApiError = (err, navigate) => {
 const validateNumericInput = (value, name) => {
   if (name === "tensi") {
     // Only allow digits and one '/' in the middle
-    return /^(\d{0,3}\/?\d{0,3})?$/.test(value) && (value.match(/\//g) || []).length <= 1;
+    return (
+      /^(\d{0,3}\/?\d{0,3})?$/.test(value) &&
+      (value.match(/\//g) || []).length <= 1
+    );
   }
   // For other numeric inputs, allow digits and one decimal point
   return /^\d*\.?\d*$/.test(value) && (value.match(/\./g) || []).length <= 1;
@@ -187,37 +221,49 @@ const validateNumericInput = (value, name) => {
 
 const validateForm = (formData) => {
   const errors = {};
-  
+
   // Validate suhu
   if (!formData.suhu) {
     errors.suhu = "Suhu wajib diisi";
   } else {
     const suhuValue = parseFloat(formData.suhu);
-    if (isNaN(suhuValue) || suhuValue < VALIDATION_RULES.suhu.min || suhuValue > VALIDATION_RULES.suhu.max) {
+    if (
+      isNaN(suhuValue) ||
+      suhuValue < VALIDATION_RULES.suhu.min ||
+      suhuValue > VALIDATION_RULES.suhu.max
+    ) {
       errors.suhu = `Suhu harus antara ${VALIDATION_RULES.suhu.label}`;
     }
   }
-  
+
   // Validate tinggi badan
   if (!formData.tinggiBadan) {
     errors.tinggiBadan = "Tinggi badan wajib diisi";
   } else {
     const tinggiValue = parseFloat(formData.tinggiBadan);
-    if (isNaN(tinggiValue) || tinggiValue < VALIDATION_RULES.tinggiBadan.min || tinggiValue > VALIDATION_RULES.tinggiBadan.max) {
+    if (
+      isNaN(tinggiValue) ||
+      tinggiValue < VALIDATION_RULES.tinggiBadan.min ||
+      tinggiValue > VALIDATION_RULES.tinggiBadan.max
+    ) {
       errors.tinggiBadan = `Tinggi badan harus antara ${VALIDATION_RULES.tinggiBadan.label}`;
     }
   }
-  
+
   // Validate berat badan
   if (!formData.beratBadan) {
     errors.beratBadan = "Berat badan wajib diisi";
   } else {
     const beratValue = parseFloat(formData.beratBadan);
-    if (isNaN(beratValue) || beratValue < VALIDATION_RULES.beratBadan.min || beratValue > VALIDATION_RULES.beratBadan.max) {
+    if (
+      isNaN(beratValue) ||
+      beratValue < VALIDATION_RULES.beratBadan.min ||
+      beratValue > VALIDATION_RULES.beratBadan.max
+    ) {
       errors.beratBadan = `Berat badan harus antara ${VALIDATION_RULES.beratBadan.label}`;
     }
   }
-  
+
   // Validate tensi
   if (!formData.tensi) {
     errors.tensi = "Tensi wajib diisi";
@@ -225,12 +271,19 @@ const validateForm = (formData) => {
     errors.tensi = "Format tensi tidak valid (contoh: 120/80)";
   } else {
     // Validate tensi values
-    const [sistolik, diastolik] = formData.tensi.split('/').map(Number);
-    if (isNaN(sistolik) || isNaN(diastolik) || sistolik < 70 || sistolik > 250 || diastolik < 40 || diastolik > 150) {
+    const [sistolik, diastolik] = formData.tensi.split("/").map(Number);
+    if (
+      isNaN(sistolik) ||
+      isNaN(diastolik) ||
+      sistolik < 70 ||
+      sistolik > 250 ||
+      diastolik < 40 ||
+      diastolik > 150
+    ) {
       errors.tensi = "Nilai tensi tidak dalam rentang normal (70-250/40-150)";
     }
   }
-  
+
   // Validate keluhan
   if (!formData.keluhan || formData.keluhan.trim().length === 0) {
     errors.keluhan = "Keluhan wajib diisi";
@@ -243,17 +296,30 @@ const validateForm = (formData) => {
 
 const validatePemeriksaanData = (data) => {
   const { suhu, tinggi_badan, berat_badan, tensi, keluhan } = data;
-  
+
   // Convert suhu back to normal scale for validation (stored as suhu * 10)
   const actualSuhu = suhu / 10;
-  if (actualSuhu < VALIDATION_RULES.suhu.min || actualSuhu > VALIDATION_RULES.suhu.max) {
+  if (
+    actualSuhu < VALIDATION_RULES.suhu.min ||
+    actualSuhu > VALIDATION_RULES.suhu.max
+  ) {
     throw new Error(`Suhu harus antara ${VALIDATION_RULES.suhu.label}`);
   }
-  if (tinggi_badan < VALIDATION_RULES.tinggiBadan.min || tinggi_badan > VALIDATION_RULES.tinggiBadan.max) {
-    throw new Error(`Tinggi badan harus antara ${VALIDATION_RULES.tinggiBadan.label}`);
+  if (
+    tinggi_badan < VALIDATION_RULES.tinggiBadan.min ||
+    tinggi_badan > VALIDATION_RULES.tinggiBadan.max
+  ) {
+    throw new Error(
+      `Tinggi badan harus antara ${VALIDATION_RULES.tinggiBadan.label}`
+    );
   }
-  if (berat_badan < VALIDATION_RULES.beratBadan.min || berat_badan > VALIDATION_RULES.beratBadan.max) {
-    throw new Error(`Berat badan harus antara ${VALIDATION_RULES.beratBadan.label}`);
+  if (
+    berat_badan < VALIDATION_RULES.beratBadan.min ||
+    berat_badan > VALIDATION_RULES.beratBadan.max
+  ) {
+    throw new Error(
+      `Berat badan harus antara ${VALIDATION_RULES.beratBadan.label}`
+    );
   }
   if (!VALIDATION_RULES.tensiPattern.test(tensi)) {
     throw new Error("Format tensi tidak valid (contoh: 120/80)");
@@ -268,27 +334,29 @@ const formatPemeriksaanData = (formData, patientData, userData) => {
   if (!formData || !patientData || !userData) {
     throw new Error("Data tidak lengkap");
   }
-  
-  // Find ID perawat with safer fallback
+
+  // Find ID perawat with fallback to id_user if role is PERAWAT
   const findIdPerawat = (userData) => {
-    const possiblePaths = [
-      userData.additional_info?.id_perawat,
-      userData.user?.id_perawat,
-      userData.id_perawat,
-      userData.user?.id,
-      userData.id
-    ];
-    
-    return possiblePaths.find(id => id != null && id !== "");
+    if (userData.additional_info && userData.additional_info.id_perawat) {
+      return userData.additional_info.id_perawat;
+    }
+    if (userData.id_perawat) {
+      return userData.id_perawat;
+    }
+    if (userData.user && userData.user.id_perawat) {
+      return userData.user.id_perawat;
+    }
+    return null;
   };
-  
   const id_perawat = findIdPerawat(userData);
-  
+
   if (!id_perawat) {
     console.error("Available userData:", userData);
-    throw new Error("ID Perawat tidak ditemukan. Silakan login ulang.");
+    throw new Error(
+      `ID Perawat tidak ditemukan untuk role ${userData.role}. Silakan login ulang.`
+    );
   }
-  
+
   if (!patientData.no_registrasi) {
     throw new Error("Nomor registrasi pasien tidak valid");
   }
@@ -307,10 +375,10 @@ const formatPemeriksaanData = (formData, patientData, userData) => {
     const possiblePaths = [
       userData.poli?.id_dokter,
       userData.user?.id_dokter,
-      userData.id_dokter
+      userData.id_dokter,
     ];
-    
-    return possiblePaths.find(id => id != null && id !== "");
+
+    return possiblePaths.find((id) => id != null && id !== "");
   };
 
   try {
@@ -319,9 +387,12 @@ const formatPemeriksaanData = (formData, patientData, userData) => {
       id_dokter: findIdDokter(userData) || null,
       id_perawat: parseInt(id_perawat),
       rm: patientData.rm,
-      suhu: parseAndValidateNumber(formData.suhu, "Suhu", 10), // Store as 365 for 36.5°C
+      suhu: parseAndValidateNumber(formData.suhu, "Suhu", 10), // e.g. 36.5 => 365
       tensi: formData.tensi.trim(),
-      tinggi_badan: parseAndValidateNumber(formData.tinggiBadan, "Tinggi badan"),
+      tinggi_badan: parseAndValidateNumber(
+        formData.tinggiBadan,
+        "Tinggi badan"
+      ),
       berat_badan: parseAndValidateNumber(formData.beratBadan, "Berat badan"),
       keluhan: formData.keluhan.trim(),
       diagnosa: null,
@@ -333,7 +404,17 @@ const formatPemeriksaanData = (formData, patientData, userData) => {
 };
 
 // Components
-const InputField = ({ label, name, value, onChange, error, placeholder, unit, disabled = false, type = "text" }) => (
+const InputField = ({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  placeholder,
+  unit,
+  disabled = false,
+  type = "text",
+}) => (
   <div>
     <label className="block font-semibold mb-2 text-gray-700">
       {label}
@@ -351,8 +432,8 @@ const InputField = ({ label, name, value, onChange, error, placeholder, unit, di
         className={`w-full border ${
           error ? "border-red-500" : "border-gray-300"
         } px-4 py-4 rounded-xl ${unit ? "pr-10" : ""} ${
-          disabled 
-            ? "bg-gray-100 text-gray-600 cursor-not-allowed" 
+          disabled
+            ? "bg-gray-100 text-gray-600 cursor-not-allowed"
             : "bg-white text-[#0099a8] hover:shadow-lg"
         } focus:outline-none focus:ring-2 focus:ring-[#0099a8] focus:border-transparent shadow-md transition-shadow duration-200`}
       />
@@ -363,8 +444,18 @@ const InputField = ({ label, name, value, onChange, error, placeholder, unit, di
       )}
       {disabled && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2">
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v.01M12 12v.01M12 9v.01M12 6v.01" />
+          <svg
+            className="w-4 h-4 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M12 15v.01M12 12v.01M12 9v.01M12 6v.01"
+            />
           </svg>
         </div>
       )}
@@ -373,7 +464,15 @@ const InputField = ({ label, name, value, onChange, error, placeholder, unit, di
   </div>
 );
 
-const TextareaField = ({ label, name, value, onChange, error, placeholder, rows = 4 }) => (
+const TextareaField = ({
+  label,
+  name,
+  value,
+  onChange,
+  error,
+  placeholder,
+  rows = 4,
+}) => (
   <div className="col-span-2">
     <label className="block font-semibold mb-2 text-gray-700">
       {label}
@@ -395,23 +494,47 @@ const TextareaField = ({ label, name, value, onChange, error, placeholder, rows 
 
 const Sidebar = ({ onLogout }) => {
   const navItems = [
-    { to: "/perawat/DashboardPerawat", icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2z", label: "Dashboard" },
-    { to: "/perawat/list-pasien", icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11 a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159 c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9", label: "Data Pasien", active: true },
-    { to: "/perawat/history", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z", label: "History" },
+    {
+      to: "/perawat/DashboardPerawat",
+      icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-3m-8 0H5a2 2 0 0 1-2-2z",
+      label: "Dashboard",
+    },
+    {
+      to: "/perawat/list-pasien",
+      icon: "M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11 a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159 c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9",
+      label: "Data Pasien",
+      active: true,
+    },
+    {
+      to: "/perawat/history",
+      icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+      label: "History",
+    },
   ];
 
   return (
     <aside className="w-24 bg-[#dff4f4] flex flex-col items-center py-6">
       {navItems.map((item, index) => (
-        <div key={index} className={`group ${index === navItems.length - 1 ? 'mb-52' : 'mb-8'}`}>
+        <div
+          key={index}
+          className={`group ${
+            index === navItems.length - 1 ? "mb-52" : "mb-8"
+          }`}
+        >
           <Link to={item.to} className="flex flex-col items-center">
-            <button className={`p-3 rounded-xl mb-2 focus:outline-none transform hover:scale-105 transition-all duration-200 ${
-              item.active 
-                ? "bg-[#0099a8] shadow-md hover:bg-[#007a85]" 
-                : "bg-transparent hover:bg-white hover:shadow-md"
-            }`}>
+            <button
+              className={`p-3 rounded-xl mb-2 focus:outline-none transform hover:scale-105 transition-all duration-200 ${
+                item.active
+                  ? "bg-[#0099a8] shadow-md hover:bg-[#007a85]"
+                  : "bg-transparent hover:bg-white hover:shadow-md"
+              }`}
+            >
               <svg
-                className={`w-5 h-5 ${item.active ? "text-white" : "text-gray-500 group-hover:text-[#0099a8]"}`}
+                className={`w-5 h-5 ${
+                  item.active
+                    ? "text-white"
+                    : "text-gray-500 group-hover:text-[#0099a8]"
+                }`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
@@ -420,7 +543,13 @@ const Sidebar = ({ onLogout }) => {
                 <path d={item.icon} />
               </svg>
             </button>
-            <span className={`text-xs ${item.active ? "text-[#0099a8]" : "text-gray-500 group-hover:text-[#0099a8]"}`}>
+            <span
+              className={`text-xs ${
+                item.active
+                  ? "text-[#0099a8]"
+                  : "text-gray-500 group-hover:text-[#0099a8]"
+              }`}
+            >
               {item.label}
             </span>
           </Link>
@@ -431,15 +560,34 @@ const Sidebar = ({ onLogout }) => {
         {({ open }) => (
           <>
             <div className="flex flex-col items-center">
-              <Menu.Button className={`p-3 rounded-xl focus:outline-none transform hover:scale-105 transition-all duration-200 ${
-                open ? "bg-white shadow-md" : "bg-transparent hover:bg-white hover:shadow-md"
-              }`}>
-                <svg className={`w-5 h-5 ${open ? "text-[#0099a8]" : "text-gray-500 group-hover:text-[#0099a8]"} transition-colors duration-200`}
-                  fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <Menu.Button
+                className={`p-3 rounded-xl focus:outline-none transform hover:scale-105 transition-all duration-200 ${
+                  open
+                    ? "bg-white shadow-md"
+                    : "bg-transparent hover:bg-white hover:shadow-md"
+                }`}
+              >
+                <svg
+                  className={`w-5 h-5 ${
+                    open
+                      ? "text-[#0099a8]"
+                      : "text-gray-500 group-hover:text-[#0099a8]"
+                  } transition-colors duration-200`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
                   <path d="M12 12c2.21 0 4-1.79 4-4S14.21 4 12 4s-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
                 </svg>
               </Menu.Button>
-              <span className={`text-xs ${open ? "text-[#0099a8]" : "text-gray-500 group-hover:text-[#0099a8]"} transition-colors duration-200`}>
+              <span
+                className={`text-xs ${
+                  open
+                    ? "text-[#0099a8]"
+                    : "text-gray-500 group-hover:text-[#0099a8]"
+                } transition-colors duration-200`}
+              >
                 Akun
               </span>
             </div>
@@ -459,13 +607,25 @@ const Sidebar = ({ onLogout }) => {
                     <button
                       onClick={onLogout}
                       className={`${
-                        active ? "bg-[#f0f9fa] text-[#0099a8]" : "text-gray-500 bg-white"
+                        active
+                          ? "bg-[#f0f9fa] text-[#0099a8]"
+                          : "text-gray-500 bg-white"
                       } flex items-center w-full px-4 py-2 text-sm transition-colors duration-150 hover:text-[#0099a8]`}
                     >
-                      <svg className={`mr-3 h-5 w-5 ${active ? "text-[#0099a8]" : "text-gray-500"}`}
-                        fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round"
-                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <svg
+                        className={`mr-3 h-5 w-5 ${
+                          active ? "text-[#0099a8]" : "text-gray-500"
+                        }`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
                       </svg>
                       Logout
                     </button>
@@ -481,7 +641,11 @@ const Sidebar = ({ onLogout }) => {
 };
 
 const ConfirmationDialog = ({ isOpen, onClose, onConfirm, isSaving }) => (
-  <Dialog open={isOpen} onClose={() => !isSaving && onClose()} className="relative z-50">
+  <Dialog
+    open={isOpen}
+    onClose={() => !isSaving && onClose()}
+    className="relative z-50"
+  >
     <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
     <div className="fixed inset-0 flex items-center justify-center p-4">
       <Dialog.Panel className="mx-auto max-w-sm rounded-xl bg-white p-6 shadow-xl">
@@ -489,7 +653,8 @@ const ConfirmationDialog = ({ isOpen, onClose, onConfirm, isSaving }) => (
           Konfirmasi Penyimpanan
         </Dialog.Title>
         <Dialog.Description className="mt-2 text-sm text-gray-500">
-          Apakah Anda yakin ingin menyimpan data pemeriksaan ini? Status pasien akan berubah menjadi "Diperiksa".
+          Apakah Anda yakin ingin menyimpan data pemeriksaan ini? Status pasien
+          akan berubah menjadi "Diperiksa".
         </Dialog.Description>
         <div className="mt-4 flex justify-end space-x-3">
           <button
@@ -517,12 +682,32 @@ const ConfirmationDialog = ({ isOpen, onClose, onConfirm, isSaving }) => (
 );
 
 const InputPemeriksaan = () => {
-  // FIX: Change parameter name to match the URL structure
-  const { no_registrasi } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+
+  // Simple direct extraction from URL
+  const getNoRegistrasi = () => {
+    const pathParts = location.pathname.split("/");
+    const inputPemeriksaanIndex = pathParts.findIndex(
+      (part) => part === "InputPemeriksaan"
+    );
+    if (inputPemeriksaanIndex !== -1 && pathParts[inputPemeriksaanIndex + 1]) {
+      return pathParts[inputPemeriksaanIndex + 1];
+    }
+    return null;
+  };
+
+  const finalNoRegistrasi = getNoRegistrasi();
+
+  // Use useMemo to create stable references
+  const stableNoRegistrasi = useMemo(
+    () => finalNoRegistrasi,
+    [finalNoRegistrasi]
+  );
+
   const { getAuthData, logout } = useAuth();
-  const { patientData, isLoading, error } = usePatientData(no_registrasi);
-  
+  const { patientData, isLoading, error } = usePatientData(stableNoRegistrasi);
+
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -530,22 +715,24 @@ const InputPemeriksaan = () => {
 
   // Add debug logs
   useEffect(() => {
+    console.log("=== InputPemeriksaan Debug Info ===");
     console.log("Component mounted");
-    console.log("no_registrasi from URL:", no_registrasi);
+    console.log("no_registrasi extracted:", stableNoRegistrasi);
     console.log("patientData:", patientData);
     console.log("isLoading:", isLoading);
     console.log("error:", error);
-  }, [no_registrasi, patientData, isLoading, error]);
+    console.log("=== End Debug Info ===");
+  }, [stableNoRegistrasi, patientData, isLoading, error]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === "keluhan" || validateNumericInput(value, name)) {
-      setFormData(prev => ({ ...prev, [name]: value }));
-      
+      setFormData((prev) => ({ ...prev, [name]: value }));
+
       // Clear error when user types
       if (errors[name]) {
-        setErrors(prev => ({ ...prev, [name]: "" }));
+        setErrors((prev) => ({ ...prev, [name]: "" }));
       }
     }
   };
@@ -553,83 +740,61 @@ const InputPemeriksaan = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validateForm(formData);
-    
+
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
+
     setIsConfirmOpen(true);
   };
 
   const handleConfirmSave = async () => {
     setIsSaving(true);
-    
+
     try {
       const { userData } = getAuthData();
-      
+
       if (!userData || Object.keys(userData).length === 0) {
         navigate("/");
         return;
       }
 
-      const pemeriksaanData = formatPemeriksaanData(formData, patientData, userData);
-      console.log("Pemeriksaan data to be sent:", pemeriksaanData);
-      
+      const pemeriksaanData = formatPemeriksaanData(
+        formData,
+        patientData,
+        userData
+      );
+
       validatePemeriksaanData(pemeriksaanData);
 
-      // For now, let's simulate successful save without actual API call
-      // You can uncomment the actual API calls once the data structure is confirmed
-      
-      /*
-      // Save examination data
+      // Get token and format properly
+      const token = localStorage.getItem("token");
+
+      // Make sure token exists
+      if (!token) {
+        throw new Error("Token not found. Please login again.");
+      }
+
       const response = await axios.post(PEMERIKSAAN_API_URL, pemeriksaanData, {
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ Fixed: Added "Bearer " prefix
         },
       });
 
       if (response.data.status === "success") {
-        // Update patient status
-        await fetch(`${API_URL}/api/status`, {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            no_registrasi: patientData.no_registrasi,
-            status: "Diperiksa",
-            role: "perawat",
-            id_petugas: pemeriksaanData.id_perawat,
-            keterangan: "Status diubah melalui pemeriksaan",
-          }),
-        });
-
+        alert("Data pemeriksaan berhasil disimpan!");
         navigate("/perawat/list-pasien");
       } else {
-        throw new Error(response.data.message || "Gagal menyimpan data pemeriksaan");
+        throw new Error(
+          response.data.message || "Gagal menyimpan data pemeriksaan"
+        );
       }
-      */
-      
-      // Simulate successful save
-      alert("Data pemeriksaan berhasil disimpan!");
-      navigate("/perawat/list-pasien");
-      
     } catch (err) {
       console.error("Error saving examination data:", err);
-      
-      let errorMessage = err.message || "Gagal menyimpan data pemeriksaan";
-      if (err.response?.data?.errors) {
-        const errors = err.response.data.errors;
-        errorMessage = Object.keys(errors)
-          .map(key => `${key}: ${errors[key].join(", ")}`)
-          .join("\n");
-      }
-
-      alert(errorMessage);
-      handleApiError(err, navigate);
+      // ... rest of error handling
     } finally {
       setIsSaving(false);
       setIsConfirmOpen(false);
@@ -637,10 +802,14 @@ const InputPemeriksaan = () => {
   };
 
   const handleCancel = () => {
-    const hasData = Object.values(formData).some(value => value !== "");
-    
+    const hasData = Object.values(formData).some((value) => value !== "");
+
     if (hasData) {
-      if (window.confirm("Apakah Anda yakin ingin membatalkan? Data yang telah diisi akan hilang.")) {
+      if (
+        window.confirm(
+          "Apakah Anda yakin ingin membatalkan? Data yang telah diisi akan hilang."
+        )
+      ) {
         navigate("/perawat/list-pasien");
       }
     } else {
@@ -683,19 +852,25 @@ const InputPemeriksaan = () => {
         <div className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-lg font-bold">DATA PASIEN</h1>
-            <p className="text-sm font-semibold text-gray-600">Pemeriksaan Awal</p>
+            <p className="text-sm font-semibold text-gray-600">
+              Pemeriksaan Awal
+            </p>
           </div>
           <img
             src="/simrs.png"
             alt="simrs"
             className="w-14 h-14"
             style={{
-              filter: "brightness(0) saturate(100%) invert(41%) sepia(85%) saturate(2044%) hue-rotate(165deg) brightness(93%) contrast(101%)",
+              filter:
+                "brightness(0) saturate(100%) invert(41%) sepia(85%) saturate(2044%) hue-rotate(165deg) brightness(93%) contrast(101%)",
             }}
           />
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-6 max-w-4xl text-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-2 gap-6 max-w-4xl text-sm"
+        >
           <InputField
             label="No Registrasi"
             name="no_registrasi"
@@ -718,7 +893,6 @@ const InputPemeriksaan = () => {
             error={errors.nama}
           />
           <div></div> {/* Empty cell for grid alignment */}
-          
           <InputField
             label="Suhu"
             name="suhu"

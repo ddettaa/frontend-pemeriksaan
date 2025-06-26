@@ -13,17 +13,16 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Cek user yang sudah login
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     console.log("Login - Initial user check:", currentUser);
+
     if (currentUser) {
       const role = currentUser.role;
-      console.log("Login - User already logged in with role:", role);
-      if (role === 3) {
-        navigate("/dokter/Dashboard");
-      } else if (role === 2) {
-        navigate("/perawat/DashboardPerawat");
+      if (role === "DOKTER") {
+        navigate("/dokter/Dashboard", { replace: true });
+      } else if (role === "PERAWAT") {
+        navigate("/perawat/DashboardPerawat", { replace: true });
       }
     }
   }, [navigate]);
@@ -40,32 +39,34 @@ const Login = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    console.log("Login - Submitting form with:", formData.username);
 
     try {
-      const response = await authService.login(
-        formData.username,
-        formData.password
-      );
+      const response = await authService.login({
+        username: formData.username,
+        password: formData.password,
+      });
+
       console.log("Login - Response received:", response);
 
-      if (response.access_token) {
-        const user = response.user || response.data?.user; // untuk jaga-jaga
-        const role = user.role;
-        console.log("Login - User role:", role);
+      const { token, user } = response;
 
-        // Redirect berdasarkan role
-        if (role === 3) {
-          console.log("Login - Navigating to dokter dashboard...");
+      if (token && user) {
+        // user dan token sudah disimpan otomatis oleh authService
+        const role = user.role;
+
+        if (role === "DOKTER") {
           navigate("/dokter/Dashboard", { replace: true });
-        } else if (role === 2 || role === 4) {
-          console.log("Login - Navigating to perawat dashboard...");
+        } else if (role === "PERAWAT") {
           navigate("/perawat/DashboardPerawat", { replace: true });
+        } else {
+          setError("Role tidak dikenali.");
         }
+      } else {
+        setError("Login gagal. Data tidak lengkap.");
       }
     } catch (error) {
       console.error("Login - Error occurred:", error);
-      setError(error.message || "Username atau password salah");
+      setError("Username atau password salah.");
     } finally {
       setLoading(false);
     }
@@ -76,16 +77,13 @@ const Login = () => {
       className="h-screen w-screen flex items-center justify-center relative bg-cover bg-center"
       style={{ backgroundImage: "url('/login-bg.png')" }}
     >
-      {/* Logo kiri bawah */}
       <img
         src="/simrs.png"
         alt="Logo SIMRS"
         className="absolute bottom-4 left-4 w-14 h-14 z-10"
       />
 
-      {/* Container utama */}
       <div className="w-[900px] h-[500px] rounded-3xl overflow-hidden flex shadow-2xl z-10 bg-white">
-        {/* Gambar Dokter */}
         <div className="w-1/2">
           <img
             src="/dokter.jpeg"
@@ -94,7 +92,6 @@ const Login = () => {
           />
         </div>
 
-        {/* Sisi Form */}
         <div className="w-1/2 flex flex-col items-center justify-center p-10 bg-white">
           <div className="w-full mb-6">
             <h2 className="text-2xl font-bold text-[#2e4e4e]">

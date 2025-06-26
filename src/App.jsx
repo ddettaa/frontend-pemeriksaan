@@ -47,7 +47,7 @@ function App() {
             element={<DataPemeriksaan />}
           />
           <Route path="diagnosa/:id_pasien" element={<Diagnosa />} />
-          <Route path="resep/:id_pasien" element={<Resep />} />
+          <Route path="resep/:no_registrasi" element={<Resep />} />
           <Route path="history" element={<History />} />
           <Route path="akun" element={<div>Akun Dokter (Coming Soon)</div>} />
         </Route>

@@ -1,14 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, Fragment, useEffect } from 'react';
 import { Combobox, Transition, Menu } from '@headlessui/react';
+import { useParams } from "react-router-dom";
 
 const Resep = () => {
+  const { no_registrasi } = useParams();
   const [forms, setForms] = useState([{ obat: '', aturan: '', jumlah: '' }]);
   const [query, setQuery] = useState('');
   const [resepId, setResepId] = useState('');
   const [obatOptions, setObatOptions] = useState([]); // Ubah menjadi state untuk menyimpan data obat dari API
   const navigate = useNavigate();
 
+  
   useEffect(() => {
     // Generate resep ID when component mounts
     const generateResepId = () => {
@@ -53,6 +56,63 @@ const Resep = () => {
       : obatOptions.filter((item) =>
           item.nama_obat.toLowerCase().includes(query.toLowerCase()) // Asumsikan nama obat ada di `nama_obat`
         );
+  const handleSaveResep = async () => {
+  try {
+    console.log("no_registrasi yang dikirim:", no_registrasi); // debug
+    const resepResponse = await fetch("https://ti054a02.agussbn.my.id/api/e-resep", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({ no_registrasi: String(no_registrasi) })
+    });
+    // ...lanjutkan seperti biasa...
+    const resepData = await resepResponse.json();
+    console.log("Response resep:", resepData, "Status:", resepResponse.status);
+    if (!resepResponse.ok || !resepData.id_resep) {
+  alert("Gagal membuat resep utama!");
+  return;
+}
+const idResep = resepData.id_resep;
+
+    // 2. Simpan detail resep (DetailEResep) untuk setiap form
+   // filepath: c:\PBL\frontend-pemeriksaan\src\components\dokter\Resep.jsx
+for (const form of forms) {
+  // Validasi
+  if (!form.obat || !form.jumlah || !form.aturan) {
+    alert("Semua field resep harus diisi!");
+    return;
+  }
+  // Debug log
+  console.log({
+    id_resep: idResep,
+    id_obat: form.obat,
+    jumlah: form.jumlah,
+    aturan_pakai: form.aturan,
+  });
+  await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}/detail`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({
+    id_obat: form.obat,
+    jumlah: form.jumlah,
+    aturan_pakai: form.aturan,
+  }),
+});
+}
+    alert("Resep berhasil disimpan!");
+    navigate("/dokter/listPasien");
+  } catch (error) {
+    console.error("Gagal menyimpan resep:", error);
+    alert("Gagal menyimpan resep.");
+  }
+};
 
   const handleAddForm = () => {
     setForms([...forms, { obat: '', aturan: '', jumlah: '' }]);
@@ -76,7 +136,8 @@ const Resep = () => {
 
   const handleJumlahChange = (e, index) => {
     const newForms = [...forms];
-    newForms[index].jumlah = e.target.value;
+    newForms[index].jumlah = parseInt(e.target.value, 10);
+
     setForms(newForms);
   };
 
@@ -103,7 +164,7 @@ const Resep = () => {
         </div>
 
         <div className="group mb-8">
-          <Link to="/dokter/list-pasien" className="flex flex-col items-center">
+          <Link to="/dokter/listPasien" className="flex flex-col items-center">
             <button className="p-3 rounded-xl mb-2 focus:outline-none bg-[#0099a8] shadow-md transform hover:scale-105 transition-all duration-200 hover:bg-[#007a85]">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0 1 18 14.158V11 a6.002 6.002 0 0 0-4-5.659V5a2 2 0 1 0-4 0v.341C7.67 6.165 6 8.388 6 11v3.159 c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9"/>
@@ -263,7 +324,7 @@ const Resep = () => {
                                   active ? 'bg-[#0099a8] text-white' : 'text-[#0099a8]'
                                 }`
                               }
-                              value={item.nama_obat} // Gunakan `nama_obat` sebagai nilai
+                              value={item.id_obat} // Gunakan `nama_obat` sebagai nilai
                             >
                               {({ selected }) => (
                                 <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
@@ -313,7 +374,7 @@ const Resep = () => {
           <button className="bg-red-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-red-600 transition-colors duration-200">
             BATAL
           </button>
-          <button className="bg-green-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-green-600 transition-colors duration-200">
+          <button className="bg-green-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-green-600 transition-colors duration-200" onClick={handleSaveResep}>
             SIMPAN
           </button>
         </div>

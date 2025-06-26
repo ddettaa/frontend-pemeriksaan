@@ -14,7 +14,8 @@ const Diagnosa = () => {
   const [tindakanOptions, setTindakanOptions] = useState([]); // Ubah menjadi state untuk menyimpan data tindakan dari API
 
   const API_URL = "https://ti054a02.agussbn.my.id"; // Hardcoded API URL
-
+  const token = localStorage.getItem("token");
+  
   useEffect(() => {
     const fetchTindakanOptions = async () => {
       try {
@@ -25,6 +26,7 @@ const Diagnosa = () => {
             headers: {
               Accept: "application/json",
               "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Pastikan token diambil dari localStorage atau state
             },
           }
         );

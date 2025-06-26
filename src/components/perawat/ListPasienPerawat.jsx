@@ -76,63 +76,64 @@ const ListPasienPerawat = () => {
       if (data && Array.isArray(data.data)) {
         let filteredPatients = data.data;
 
-        // Filter by nurse's poli if nursePoliName is available
-        const storedData = localStorage.getItem("user");
-        if (storedData) {
-          try {
-            const userData = JSON.parse(storedData);
+// Filter by nurse's poli if available
+const storedData = localStorage.getItem("user");
+if (storedData) {
+  try {
+    const userData = JSON.parse(storedData);
+    let userPoliName = "";
+    if (userData.user && userData.user.poli_name) {
+      userPoliName = userData.user.poli_name;
+    } else if (userData.poli_name) {
+      userPoliName = userData.poli_name;
+    } else if (userData.user && userData.user.nama_poli) {
+      userPoliName = userData.user.nama_poli;
+    } else if (userData.nama_poli) {
+      userPoliName = userData.nama_poli;
+    } else if (userData.user && userData.user.poli) {
+      userPoliName = userData.user.poli;
+    } else if (userData.poli) {
+      userPoliName = userData.poli;
+    }
 
-            // Try to get poli name from different possible paths
-            let userPoliName = "";
-            if (userData.user && userData.user.poli_name) {
-              userPoliName = userData.user.poli_name;
-            } else if (userData.poli_name) {
-              userPoliName = userData.poli_name;
-            } else if (userData.user && userData.user.nama_poli) {
-              userPoliName = userData.user.nama_poli;
-            } else if (userData.nama_poli) {
-              userPoliName = userData.nama_poli;
-            } else if (userData.user && userData.user.poli) {
-              userPoliName = userData.user.poli;
-            } else if (userData.poli) {
-              userPoliName = userData.poli;
-            }
+    // Jika userPoliName adalah objek, ambil nama_poli-nya
+    let poliNama = userPoliName;
+    if (typeof userPoliName === "object" && userPoliName !== null) {
+      poliNama = userPoliName.nama_poli;
+    }
 
-            console.log("Filtering by poli:", userPoliName); // Debug log
+    if (poliNama) {
+      filteredPatients = filteredPatients.filter(
+        (patient) =>
+          (patient.nama_poli || "").trim().toLowerCase() ===
+          (poliNama || "").trim().toLowerCase()
+      );
+    }
+  } catch (error) {
+    console.error("Error parsing user data for filtering:", error);
+  }
+}
 
-            // if (userPoliName) {
-            //   filteredPatients = data.data.filter(
-            //     (patient) => patient.nama_poli === userPoliName
-            //   );
-            // }
-          } catch (error) {
-            console.error("Error parsing user data for filtering:", error);
-          }
-        }
+// Apply search filter if searchQuery exists
+if (searchQuery.trim()) {
+  filteredPatients = filteredPatients.filter(
+    (patient) =>
+      patient.nama_pasien.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      patient.rm.toString().includes(searchQuery)
+  );
+}
 
-        // Apply search filter if searchQuery exists
-        if (searchQuery.trim()) {
-          filteredPatients = filteredPatients.filter(
-            (patient) =>
-              patient.nama_pasien
-                .toLowerCase()
-                .includes(searchQuery.toLowerCase()) ||
-              patient.rm.toString().includes(searchQuery)
-          );
-        }
+// Pagination
+const itemsPerPage = 10;
+const totalItems = filteredPatients.length;
+const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
+setTotalPages(calculatedTotalPages);
 
-        // Calculate pagination for filtered data
-        const itemsPerPage = 10;
-        const totalItems = filteredPatients.length;
-        const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
-        setTotalPages(calculatedTotalPages);
+const startIndex = (currentPage - 1) * itemsPerPage;
+const endIndex = startIndex + itemsPerPage;
+const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
 
-        // Get current page data
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
-
-        setPatients(paginatedPatients);
+setPatients(paginatedPatients);
 
         console.log("Total patients:", totalItems); // Debug log
         console.log("Current page patients:", paginatedPatients.length); // Debug log
@@ -503,47 +504,43 @@ const ListPasienPerawat = () => {
           )}
         </div>
 
-        {totalPages > 1 && (
-          <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
-            <button
-              onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
-              disabled={currentPage === 1}
-              className={`border px-3 py-1.5 text-white rounded-l-lg ${
-                currentPage === 1
-                  ? "bg-gray-300 cursor-not-allowed opacity-50"
-                  : "bg-[#0099a8] hover:bg-[#007a85]"
-              } transition-colors duration-200`}
-            >
-              Previous
-            </button>
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`border px-3 py-1.5 ${
-                  currentPage === index + 1
-                    ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
-                    : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
-                } transition-colors duration-200`}
-              >
-                {index + 1}
-              </button>
-            ))}
-            <button
-              onClick={() =>
-                handlePageChange(Math.min(currentPage + 1, totalPages))
-              }
-              disabled={currentPage === totalPages}
-              className={`border px-3 py-1.5 text-white rounded-r-lg ${
-                currentPage === totalPages
-                  ? "bg-gray-300 cursor-not-allowed opacity-50"
-                  : "bg-[#0099a8] hover:bg-[#007a85]"
-              } transition-colors duration-200`}
-            >
-              Next
-            </button>
-          </div>
-        )}
+        <div className="mt-4 flex justify-end items-center space-x-1 text-xs">
+  <button
+    onClick={() => handlePageChange(Math.max(currentPage - 1, 1))}
+    disabled={currentPage === 1}
+    className={`border px-3 py-1.5 text-white rounded-l-lg ${
+      currentPage === 1
+        ? "bg-gray-300 cursor-not-allowed opacity-50"
+        : "bg-[#0099a8] hover:bg-[#007a85]"
+    } transition-colors duration-200`}
+  >
+    Previous
+  </button>
+  {[...Array(totalPages)].map((_, index) => (
+    <button
+      key={index + 1}
+      onClick={() => handlePageChange(index + 1)}
+      className={`border px-3 py-1.5 ${
+        currentPage === index + 1
+          ? "text-white bg-[#0099a8] hover:bg-[#007a85]"
+          : "text-gray-500 hover:text-[#0099a8] hover:border-[#0099a8] hover:bg-[#e6f3f3] bg-white"
+      } transition-colors duration-200`}
+    >
+      {index + 1}
+    </button>
+  ))}
+  <button
+    onClick={() => handlePageChange(Math.min(currentPage + 1, totalPages))}
+    disabled={currentPage === totalPages}
+    className={`border px-3 py-1.5 text-white rounded-r-lg ${
+      currentPage === totalPages
+        ? "bg-gray-300 cursor-not-allowed opacity-50"
+        : "bg-[#0099a8] hover:bg-[#007a85]"
+    } transition-colors duration-200`}
+  >
+    Next
+  </button>
+</div>
       </main>
     </div>
   );

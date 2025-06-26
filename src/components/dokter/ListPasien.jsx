@@ -185,6 +185,17 @@ const ListPasien = () => {
 
 useEffect(() => {
   let filtered = allPatients;
+
+  // Filter pasien sesuai poli dokter login
+  if (poliName) {
+    filtered = filtered.filter(
+      (p) =>
+        (p.nama_poli || "").trim().toLowerCase() ===
+        (poliName || "").trim().toLowerCase()
+    );
+  }
+
+  // Filter search jika ada
   if (searchQuery.trim()) {
     filtered = filtered.filter(
       (p) =>
@@ -193,6 +204,7 @@ useEffect(() => {
     );
   }
 
+  // Pagination
   const itemsPerPage = 10;
   const totalItems = filtered.length;
   const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage) || 1;
@@ -201,7 +213,7 @@ useEffect(() => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   setPatients(filtered.slice(startIndex, endIndex));
-}, [allPatients, searchQuery, currentPage]);
+}, [allPatients, searchQuery, currentPage, poliName]);
 
   const handleSearch = (value) => {
     setSearchQuery(value);

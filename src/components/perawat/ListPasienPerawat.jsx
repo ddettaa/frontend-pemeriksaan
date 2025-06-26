@@ -100,11 +100,24 @@ const ListPasienPerawat = () => {
 
             console.log("Filtering by poli:", userPoliName); // Debug log
 
+            // if (userPoliName) {
+            //   filteredPatients = data.data.filter(
+            //     (patient) => patient.nama_poli === userPoliName
+            //   );
+            // }
             if (userPoliName) {
-              filteredPatients = data.data.filter(
-                (patient) => patient.nama_poli === userPoliName
-              );
-            }
+  filteredPatients = data.data.filter((patient) => {
+    const match = patient.nama_poli?.trim().toLowerCase() === userPoliName.trim().toLowerCase();
+    if (!match) {
+      console.log(`Tidak cocok: "${patient.nama_poli}" vs "${userPoliName}"`);
+    }
+    return match;
+  });
+  console.log("Jumlah pasien setelah filter poli:", filteredPatients.length);
+} else {
+  console.log("Tidak ada userPoliName ditemukan dari localStorage");
+}
+
           } catch (error) {
             console.error("Error parsing user data for filtering:", error);
           }

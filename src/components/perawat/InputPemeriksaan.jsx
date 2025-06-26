@@ -776,6 +776,9 @@ const InputPemeriksaan = () => {
         throw new Error("Token not found. Please login again.");
       }
 
+      console.log("Kirim data ke API:", pemeriksaanData);
+console.log("Token yang digunakan:", token);
+
       const response = await axios.post(PEMERIKSAAN_API_URL, pemeriksaanData, {
         headers: {
           Accept: "application/json",

@@ -106,14 +106,17 @@ for (const form of forms) {
   }),
 });
 }
-    alert("Resep berhasil disimpan!");
-    navigate("/dokter/listPasien");
+    setShowToast(true);
+setTimeout(() => {
+  setShowToast(false);
+  navigate("/dokter/listPasien");
+}, 1800); // Toast tampil 1.8 detik lalu redirect
   } catch (error) {
     console.error("Gagal menyimpan resep:", error);
     alert("Gagal menyimpan resep.");
   }
 };
-
+  const [showToast, setShowToast] = useState(false);
   const handleAddForm = () => {
     setForms([...forms, { obat: '', aturan: '', jumlah: '' }]);
   };
@@ -279,6 +282,17 @@ for (const form of forms) {
     )}
   </Menu>
 </aside>
+
+{showToast && (
+  <div className="fixed top-8 right-8 z-50">
+    <div className="flex items-center px-6 py-4 bg-green-500 text-white rounded-xl shadow-lg animate-slide-in">
+      <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      <span className="font-semibold">Resep berhasil disimpan!</span>
+    </div>
+  </div>
+)}
 
       <main className="flex-1 p-10 overflow-auto relative">
         <div className="flex justify-between items-start mb-8">

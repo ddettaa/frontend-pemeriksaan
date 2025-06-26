@@ -712,6 +712,7 @@ const InputPemeriksaan = () => {
   const [errors, setErrors] = useState({});
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   // Add debug logs
   useEffect(() => {
@@ -787,14 +788,13 @@ console.log("Token yang digunakan:", token);
         },
       });
 
-      if (response.data.status === "success") {
-        alert("Data pemeriksaan berhasil disimpan!");
-        navigate("/perawat/listPasien");
-      } else {
-        throw new Error(
-          response.data.message || "Gagal menyimpan data pemeriksaan"
-        );
-      }
+     if (response.data.status === "success") {
+  setShowToast(true);
+  setTimeout(() => {
+    setShowToast(false);
+    navigate("/perawat/listPasien");
+  }, 1800); // Toast tampil 1.8 detik lalu redirect
+}
     } catch (err) {
       console.error("Error saving examination data:", err);
       // ... rest of error handling
@@ -850,6 +850,17 @@ console.log("Token yang digunakan:", token);
   return (
     <div className="h-screen w-screen overflow-hidden bg-white flex">
       <Sidebar onLogout={logout} />
+
+      {showToast && (
+      <div className="fixed top-8 right-8 z-50">
+        <div className="flex items-center px-6 py-4 bg-green-500 text-white rounded-xl shadow-lg animate-slide-in">
+          <svg className="w-6 h-6 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="font-semibold">Data pemeriksaan berhasil disimpan!</span>
+        </div>
+      </div>
+    )}
 
       <main className="flex-1 p-10 overflow-auto relative">
         <div className="flex justify-between items-start mb-8">

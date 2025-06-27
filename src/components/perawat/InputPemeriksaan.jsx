@@ -789,11 +789,22 @@ console.log("Token yang digunakan:", token);
       });
 
      if (response.data.status === "success") {
+  // Update status pasien ke "Diperiksa" (status: 1)
+  await fetch(`https://ti054a01.agussbn.my.id/api/pendaftaran/${patientData.no_registrasi}`, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({ status: 1 }),
+  });
+
   setShowToast(true);
   setTimeout(() => {
     setShowToast(false);
     navigate("/perawat/listPasien");
-  }, 1800); // Toast tampil 1.8 detik lalu redirect
+  }, 1800);
 }
     } catch (err) {
       console.error("Error saving examination data:", err);

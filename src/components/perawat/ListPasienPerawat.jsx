@@ -173,25 +173,35 @@ setPatients(paginatedPatients);
     setCurrentPage(page);
   };
 
-  const getStatusColor = (status) => {
-    // Return default style if status is null or undefined
-    if (!status) return "bg-gray-100 text-gray-800";
-
-    // Safely convert to lowercase, using empty string as fallback
-    const normalizedStatus = (status || "").toLowerCase();
-
-    switch (normalizedStatus) {
-      case "menunggu":
-      case "menunggu diperiksa":
-        return "bg-yellow-100 text-yellow-800";
-      case "diperiksa":
-        return "bg-blue-100 text-blue-800";
-      case "selesai":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // ...existing code...
+const getStatusColor = (status) => {
+  // Bisa menerima status string atau angka
+  if (status === null || status === undefined) return "bg-gray-100 text-gray-800";
+  let statusRaw = status;
+  if (typeof status === "string") {
+    statusRaw = status.toLowerCase();
+  }
+  // Mapping status_raw atau status string
+  switch (statusRaw) {
+    case 0:
+    case "menunggu":
+      return "bg-yellow-100 text-yellow-800";
+    case 1:
+    case "diperiksa":
+      return "bg-blue-100 text-blue-800";
+    case 2:
+    case "selesai diperiksa":
+      return "bg-purple-100 text-purple-800";
+    case 3:
+    case "selesai pembayaran":
+      return "bg-pink-100 text-pink-800";
+    case 4:
+    case "selesai":
+      return "bg-green-100 text-green-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
 
   return (
     <div className="h-screen w-screen overflow-hidden bg-white flex">
@@ -461,13 +471,9 @@ setPatients(paginatedPatients);
                         <td className="px-4 py-3">{patient.nama_poli}</td>
                         <td className="px-4 py-3">{patient.nama_dokter}</td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                              patient.status
-                            )}`}
-                          >
-                            {patient.status || "Menunggu"}
-                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(patient.status)}`}>
+  {patient.status || "Menunggu"}
+</span>
                         </td>
                         <td className="px-4 py-3">
                           <Link

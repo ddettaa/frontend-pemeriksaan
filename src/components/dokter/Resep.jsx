@@ -13,7 +13,7 @@ const Resep = () => {
   const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
 
-  // ⬇️ Tambahkan di sini, di luar useEffect!
+  
   const createResepRequested = useRef(false);
 
   useEffect(() => {
@@ -97,26 +97,40 @@ const Resep = () => {
       }
     }
     for (const form of forms) {
-      await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}/detail`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          id_obat: form.obat,
-          jumlah: form.jumlah,
-          aturan_pakai: form.aturan,
-        }),
-      });
-    }
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-      localStorage.removeItem(`resep_created_${no_registrasi}`); // ⬅️ Di sini!
-      navigate("/dokter/listPasien");
-    }, 1800);
+  await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}/detail`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify({
+      id_obat: form.obat,
+      jumlah: form.jumlah,
+      aturan_pakai: form.aturan,
+    }),
+  });
+}
+
+// ⬇️ Update status pasien menjadi "Diperiksa" (status: 2)
+await fetch(`https://ti054a01.agussbn.my.id/api/pendaftaran/${no_registrasi}`, {
+  method: "PUT",
+  headers: {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+  body: JSON.stringify({ status: 2 }), // ⬅️ status_raw = 2 = "Diperiksa"
+});
+
+// ⬇️ Tampilkan notifikasi dan redirect
+setShowToast(true);
+setTimeout(() => {
+  setShowToast(false);
+  localStorage.removeItem(`resep_created_${no_registrasi}`);
+  navigate("/dokter/listPasien");
+}, 1800);
+
   } catch (error) {
     console.error("Gagal menyimpan resep:", error);
     alert("Gagal menyimpan resep.");

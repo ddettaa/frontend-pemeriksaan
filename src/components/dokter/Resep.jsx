@@ -2,28 +2,56 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, Fragment, useEffect } from 'react';
 import { Combobox, Transition, Menu } from '@headlessui/react';
 import { useParams } from "react-router-dom";
+import { useRef } from 'react';
 
 const Resep = () => {
   const { no_registrasi } = useParams();
   const [forms, setForms] = useState([{ obat: '', aturan: '', jumlah: '' }]);
   const [query, setQuery] = useState('');
-  const [resepId, setResepId] = useState('');
-  const [obatOptions, setObatOptions] = useState([]); // Ubah menjadi state untuk menyimpan data obat dari API
+  const [idResep, setIdResep] = useState('');
+  const [obatOptions, setObatOptions] = useState([]);
   const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(false);
 
-  
+  // ⬇️ Tambahkan di sini, di luar useEffect!
+  const createResepRequested = useRef(false);
+
   useEffect(() => {
-    // Generate resep ID when component mounts
-    const generateResepId = () => {
-      const date = new Date();
-      const year = date.getFullYear().toString().slice(-2);
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      return `RSP${year}${month}${day}${random}`;
+    const resepFlag = localStorage.getItem(`resep_created_${no_registrasi}`);
+    if (resepFlag) {
+      setIdResep(resepFlag);
+      return;
+    }
+
+    // Cegah double POST karena Strict Mode
+    if (createResepRequested.current) return;
+    createResepRequested.current = true;
+
+    const createEmptyResep = async () => {
+      try {
+        const response = await fetch("https://ti054a02.agussbn.my.id/api/e-resep", {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ no_registrasi: String(no_registrasi) })
+        });
+        const data = await response.json();
+        if (response.ok && data.id_resep) {
+          setIdResep(data.id_resep);
+          localStorage.setItem(`resep_created_${no_registrasi}`, data.id_resep);
+        } else {
+          setIdResep("Gagal mendapatkan ID");
+        }
+      } catch {
+        setIdResep("Gagal mendapatkan ID");
+      }
     };
-    setResepId(generateResepId());
-  }, []);
+
+    createEmptyResep();
+  }, [no_registrasi]);
 
   useEffect(() => {
     const fetchObatOptions = async () => {
@@ -58,66 +86,59 @@ const Resep = () => {
         );
   const handleSaveResep = async () => {
   try {
-    console.log("no_registrasi yang dikirim:", no_registrasi); // debug
-    const resepResponse = await fetch("https://ti054a02.agussbn.my.id/api/e-resep", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({ no_registrasi: String(no_registrasi) })
-    });
-    // ...lanjutkan seperti biasa...
-    const resepData = await resepResponse.json();
-    console.log("Response resep:", resepData, "Status:", resepResponse.status);
-    if (!resepResponse.ok || !resepData.id_resep) {
-  alert("Gagal membuat resep utama!");
-  return;
-}
-const idResep = resepData.id_resep;
-
-    // 2. Simpan detail resep (DetailEResep) untuk setiap form
-   // filepath: c:\PBL\frontend-pemeriksaan\src\components\dokter\Resep.jsx
-for (const form of forms) {
-  // Validasi
-  if (!form.obat || !form.jumlah || !form.aturan) {
-    alert("Semua field resep harus diisi!");
-    return;
-  }
-  // Debug log
-  console.log({
-    id_resep: idResep,
-    id_obat: form.obat,
-    jumlah: form.jumlah,
-    aturan_pakai: form.aturan,
-  });
-  await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}/detail`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-    body: JSON.stringify({
-    id_obat: form.obat,
-    jumlah: form.jumlah,
-    aturan_pakai: form.aturan,
-  }),
-});
-}
+    if (!idResep || idResep === "Gagal mendapatkan ID") {
+      alert("ID Resep belum tersedia!");
+      return;
+    }
+    for (const form of forms) {
+      if (!form.obat || !form.jumlah || !form.aturan) {
+        alert("Semua field resep harus diisi!");
+        return;
+      }
+    }
+    for (const form of forms) {
+      await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}/detail`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          id_obat: form.obat,
+          jumlah: form.jumlah,
+          aturan_pakai: form.aturan,
+        }),
+      });
+    }
     setShowToast(true);
-setTimeout(() => {
-  setShowToast(false);
-  navigate("/dokter/listPasien");
-}, 1800); // Toast tampil 1.8 detik lalu redirect
+    setTimeout(() => {
+      setShowToast(false);
+      localStorage.removeItem(`resep_created_${no_registrasi}`); // ⬅️ Di sini!
+      navigate("/dokter/listPasien");
+    }, 1800);
   } catch (error) {
     console.error("Gagal menyimpan resep:", error);
     alert("Gagal menyimpan resep.");
   }
 };
-  const [showToast, setShowToast] = useState(false);
-  const handleAddForm = () => {
+
+const handleCancel = async () => {
+  if (idResep && idResep !== "Gagal mendapatkan ID") {
+    await fetch(`https://ti054a02.agussbn.my.id/api/e-resep/${idResep}`, {
+      method: "DELETE",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    localStorage.removeItem(`resep_created_${no_registrasi}`);
+  }
+  navigate("/dokter/listPasien");
+};
+
+    const handleAddForm = () => {
     setForms([...forms, { obat: '', aturan: '', jumlah: '' }]);
   };
 
@@ -306,14 +327,14 @@ setTimeout(() => {
         <div className="w-[750px] space-y-6">
           {/* Resep ID Field */}
           <div className="bg-gray-100 p-6 rounded-xl border border-gray-200">
-            <div className="flex items-center space-x-4">
-              <label className="text-sm font-medium text-gray-500">ID Resep:</label>
-              <input
-                type="text"
-                value={resepId}
-                readOnly
-                className="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none cursor-not-allowed font-medium select-none"
-              />
+      <div className="flex items-center space-x-4">
+        <label className="text-sm font-medium text-gray-500">ID Resep:</label>
+        <input
+          type="text"
+          value={idResep}
+          readOnly
+          className="bg-gray-200 text-gray-500 px-4 py-2 rounded-lg border border-gray-300 focus:outline-none cursor-not-allowed font-medium select-none"
+        />
             </div>
           </div>
 
@@ -411,9 +432,12 @@ setTimeout(() => {
         </div>
 
         <div className="fixed bottom-8 right-8 space-x-4">
-          <button className="bg-red-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-red-600 transition-colors duration-200">
-            BATAL
-          </button>
+          <button
+  className="bg-red-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-red-600 transition-colors duration-200"
+  onClick={handleCancel}
+>
+  BATAL
+</button>
           <button className="bg-green-500 text-white px-6 py-2 rounded-xl shadow text-sm hover:bg-green-600 transition-colors duration-200" onClick={handleSaveResep}>
             SIMPAN
           </button>

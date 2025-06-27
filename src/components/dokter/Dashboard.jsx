@@ -12,6 +12,27 @@ const Dashboard = () => {
   const [jadwalDokter, setJadwalDokter] = useState([]); // Daftar jadwal dokter
   const [loading, setLoading] = useState(true); // Status loading saat mengambil data
   const [error, setError] = useState(null); // Pesan error jika ada masalah
+  const [antrianHariIni, setAntrianHariIni] = useState(0); // Jumlah antrian hari ini
+  // Fetch jumlah antrian hari ini dari /pendaftaran
+  useEffect(() => {
+    const fetchAntrian = async () => {
+      try {
+        const res = await fetch("https://ti054a01.agussbn.my.id/api/pendaftaran");
+        if (!res.ok) throw new Error("Failed to fetch antrian");
+        const data = await res.json();
+        // Filter berdasarkan tgl_kunjungan = hari ini
+        const today = new Date();
+        const todayStr = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        const filtered = Array.isArray(data.data)
+          ? data.data.filter((item) => (item.tgl_kunjungan || "").slice(0, 10) === todayStr)
+          : [];
+        setAntrianHariIni(filtered.length);
+      } catch {
+        setAntrianHariIni(0);
+      }
+    };
+    fetchAntrian();
+  }, []);
 
   // ===== FUNGSI HELPER =====
   /**
@@ -342,7 +363,7 @@ const Dashboard = () => {
             <div className="mt-8 mb-6">
               <div className="bg-[#c9d6ec] text-white inline-block rounded-md px-4 py-2 font-semibold w-[150px]">
                 ANTRIAN <br />
-                <span className="text-xl font-bold text-white block">0001</span>
+                <span className="text-xl font-bold text-white block">{antrianHariIni}</span>
               </div>
             </div>
           </div>
@@ -370,7 +391,7 @@ const Dashboard = () => {
 
           {/* Tampilkan tabel jika tidak loading dan tidak error */}
           {!loading && !error && (
-            <table className="min-w-full border border-gray-300 bg-white text-sm">
+            <table className="min-w-full border border-gray-300 bg-white text-sm rounded-xl overflow-hidden shadow-sm">
               {/* Header Tabel */}
               <thead>
                 <tr className="bg-[#c9d6ec] text-gray-700">

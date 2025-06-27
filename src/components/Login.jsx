@@ -131,9 +131,16 @@ const Login = () => {
               </span>
             </div>
 
+
             {error && (
-              <div className="text-red-500 text-sm text-center mb-4">
-                {error}
+              <div
+                className="relative text-red-500 text-sm text-center mb-4 animate-shake bg-red-50 border border-red-200 rounded-lg py-2 px-4 flex items-center justify-center gap-2 shadow-sm transition-all duration-300"
+                style={{ minHeight: 40 }}
+              >
+                <svg className="w-5 h-5 text-red-400 animate-bounce mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z" />
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 

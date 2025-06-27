@@ -18,8 +18,27 @@ const ListPasien = () => {
   const [allPatients, setAllPatients] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => {
   const today = new Date();
-  return today.toISOString().slice(0, 10);
+  // Adjust for timezone offset to get local date
+  return new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
 });
+
+// Force set selectedDate to today on mount and when day changes
+useEffect(() => {
+  const setToday = () => {
+    const today = new Date();
+    const local = new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    setSelectedDate(local);
+  };
+  setToday();
+  const interval = setInterval(() => {
+    setToday();
+  }, 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
 const [isDateFocused, setIsDateFocused] = useState(false);
 const dateInputRef = useRef(null);
 

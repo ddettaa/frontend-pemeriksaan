@@ -4,9 +4,10 @@ import { Menu, Transition } from "@headlessui/react";
 
 const ListPasienPerawat = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-const [isDateFocused, setIsDateFocused] = useState(false);
+  const [isDateFocused, setIsDateFocused] = useState(false);
   const navigate = useNavigate();
   const [nurseName, setNurseName] = useState("");
+  const [poliName, setPoliName] = useState("");
 
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,10 +15,45 @@ const [isDateFocused, setIsDateFocused] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+
   const [selectedDate, setSelectedDate] = useState(() => {
   const today = new Date();
-  return today.toISOString().slice(0, 10);
+  // Adjust for timezone offset to get local date
+  return new Date(today.getTime() - today.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 10);
 });
+
+
+// Force set selectedDate to today on mount and when day changes
+useEffect(() => {
+  const setToday = () => {
+    const todayStr = new Date();
+    // Adjust for timezone offset to get local date
+    const local = new Date(todayStr.getTime() - todayStr.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    setSelectedDate(local);
+  };
+  setToday();
+  const interval = setInterval(() => {
+    setToday();
+  }, 60 * 1000);
+  return () => clearInterval(interval);
+}, []);
+
+useEffect(() => {
+    const storedData = localStorage.getItem("user");
+    if (storedData) {
+      const userData = JSON.parse(storedData);
+      if (userData.user && userData.user.nama_lengkap) {
+        setNurseName(userData.user.nama_lengkap);
+      }
+      if (userData.poli) {
+        setPoliName(userData.poli.nama_poli.toUpperCase());
+      }
+    }
+  }, []);
 
   // Updated API URL
   const API_URL = "https://ti054a01.agussbn.my.id";
@@ -357,7 +393,9 @@ const getStatusColor = (status) => {
       <main className="flex-1 p-8 overflow-auto">
         <div className="flex justify-between items-start mb-8">
   <div>
-    <h1 className="text-lg font-bold text-black">PASIEN RAWAT JALAN</h1>
+    <h1 className="text-lg font-bold text-black">
+      PASIEN RAWAT JALAN <span className="font-normal">({poliName})</span>
+      </h1>
     <p className="text-sm text-gray-600 mt-1">
       Halo, nurse {nurseName}
     </p>
@@ -513,7 +551,6 @@ const getStatusColor = (status) => {
               <table className="min-w-full bg-white">
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
-                    <th className="px-4 py-3 font-medium text-left">Tanggal Kunjungan</th>
                     <th className="px-4 py-3 font-medium text-left">Antrian</th>
                     <th className="px-4 py-3 font-medium text-left">
                       No Registrasi
@@ -533,7 +570,6 @@ const getStatusColor = (status) => {
                         key={patient.no_registrasi}
                         className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
                       >
-                        <td className="px-4 py-3">{(patient.tgl_kunjungan || patient.created_at || "").slice(0, 10)}</td>
                         <td className="px-4 py-3">{patient.no_antrian}</td>
                         <td className="px-4 py-3">{patient.no_registrasi}</td>
                         <td className="px-4 py-3">{patient.rm}</td>

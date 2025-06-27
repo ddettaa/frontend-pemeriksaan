@@ -600,20 +600,39 @@ const getStatusColor = (status) => {
           </span>
         </td>
         <td className="px-4 py-3">
-          <Link to={`/dokter/data-pemeriksaan/${patient.no_registrasi}`}>
-            <button className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
-              </svg>
-            </button>
-          </Link>
-        </td>
+  {patient.status === 1 || (typeof patient.status === "string" && patient.status.toLowerCase() === "diperiksa") ? (
+    <Link to={`/dokter/data-pemeriksaan/${patient.no_registrasi}`}>
+      <button
+        className="text-[#558c89] hover:text-[#0099a8] p-1.5 rounded-full transition-colors duration-200 bg-transparent"
+      >
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
+        </svg>
+      </button>
+    </Link>
+  ) : (
+    <button
+      className="text-gray-300 p-1.5 rounded-full bg-transparent cursor-not-allowed relative group"
+      disabled
+    >
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M15.232 5.232l3.536 3.536M9 11l6-6 3 3-6 6H9v-3zM19 19H5V5h7" />
+      </svg>
+    </button>
+  )}
+</td>
       </tr>
     ))
   ) : (

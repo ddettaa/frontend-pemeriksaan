@@ -3,7 +3,8 @@ import { useState, Fragment, useEffect, useCallback } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
 const ListPasienPerawat = () => {
-  const [isFocused, setIsFocused] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+const [isDateFocused, setIsDateFocused] = useState(false);
   const navigate = useNavigate();
   const [nurseName, setNurseName] = useState("");
 
@@ -13,6 +14,10 @@ const ListPasienPerawat = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+});
 
   // Updated API URL
   const API_URL = "https://ti054a01.agussbn.my.id";
@@ -114,6 +119,11 @@ if (storedData) {
   }
 }
 
+filteredPatients = filteredPatients.filter(
+    (patient) =>
+      (patient.tgl_kunjungan || patient.created_at || "").slice(0, 10) === selectedDate
+  );
+
 // Apply search filter if searchQuery exists
 if (searchQuery.trim()) {
   filteredPatients = filteredPatients.filter(
@@ -128,6 +138,7 @@ const itemsPerPage = 10;
 const totalItems = filteredPatients.length;
 const calculatedTotalPages = Math.ceil(totalItems / itemsPerPage);
 setTotalPages(calculatedTotalPages);
+
 
 const startIndex = (currentPage - 1) * itemsPerPage;
 const endIndex = startIndex + itemsPerPage;
@@ -147,7 +158,7 @@ setPatients(paginatedPatients);
     } finally {
       setLoading(false);
     }
-  }, [API_URL, currentPage, searchQuery]);
+  }, [API_URL, currentPage, searchQuery, selectedDate]);
 
   useEffect(() => {
     fetchPatients();
@@ -230,7 +241,7 @@ const getStatusColor = (status) => {
 
         <div className="group mb-8">
           <Link
-            to="/perawat/list-pasien"
+            to="/perawat/listPasien"
             className="flex flex-col items-center"
           >
             <button className="p-3 rounded-xl mb-2 focus:outline-none bg-[#0099a8] shadow-md transform hover:scale-105 transition-all duration-200 hover:bg-[#007a85]">
@@ -344,95 +355,152 @@ const getStatusColor = (status) => {
       </aside>
 
       <main className="flex-1 p-8 overflow-auto">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-lg font-bold text-black">PASIEN RAWAT JALAN</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Halo, nurse {nurseName}
-            </p>
-          </div>
-          <img
-            src="/simrs.png"
-            alt="simrs"
-            className="w-14 h-14"
-            style={{
-              filter:
-                "brightness(0) saturate(100%) invert(41%) sepia(85%) saturate(2044%) hue-rotate(165deg) brightness(93%) contrast(101%)",
-            }}
-          />
-        </div>
+        <div className="flex justify-between items-start mb-8">
+  <div>
+    <h1 className="text-lg font-bold text-black">PASIEN RAWAT JALAN</h1>
+    <p className="text-sm text-gray-600 mt-1">
+      Halo, nurse {nurseName}
+    </p>
+  </div>
+  <img
+    src="/simrs.png"
+    alt="simrs"
+    className="w-14 h-14"
+    style={{
+      filter:
+        "brightness(0) saturate(100%) invert(41%) sepia(85%) saturate(2044%) hue-rotate(165deg) brightness(93%) contrast(101%)",
+    }}
+  />
+</div>
 
-        <div className="mt-8 mb-6">
-          <div className="max-w-3xl">
-            <label
-              htmlFor="search"
-              className="block text-sm font-medium text-gray-700 mb-2"
+        <div className="max-w-3xl">
+      <label
+        htmlFor="search"
+        className="block text-sm font-medium text-gray-700 mb-2"
+      >
+        Cari Pasien
+      </label>
+      <div
+        className={`relative rounded-xl overflow-hidden transition-all duration-300 ${
+          isSearchFocused
+            ? "ring-2 ring-[#0099a8] shadow-lg"
+            : "border border-gray-200 shadow-sm"
+        }`}
+      >
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <svg
+            className={`w-5 h-5 transition-colors duration-200 ${
+              isSearchFocused ? "text-[#0099a8]" : "text-gray-400"
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        <input
+          id="search"
+          type="text"
+          placeholder="Cari berdasarkan nama pasien atau nomor Rekam Medis..."
+          className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none"
+          value={searchQuery}
+          onChange={handleSearch}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={() => handleSearch({ target: { value: "" } })}
+            className="absolute inset-y-0 right-0 pr-4 flex items-center bg-transparent hover:bg-transparent focus:outline-none"
+            tabIndex={-1}
+          >
+            <svg
+              className="w-5 h-5 text-[#0099a8] hover:text-[#007a85] transition-colors duration-200"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
             >
-              Cari Pasien
-            </label>
-            <div
-              className={`relative rounded-xl overflow-hidden transition-all duration-300 ${
-                isFocused
-                  ? "ring-2 ring-[#0099a8] shadow-lg"
-                  : "border border-gray-200 shadow-sm"
-              }`}
-            >
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg
-                  className={`w-5 h-5 transition-colors duration-200 ${
-                    isFocused ? "text-[#0099a8]" : "text-gray-400"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                id="search"
-                type="text"
-                placeholder="Cari berdasarkan nama pasien atau nomor Rekam Medis..."
-                className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 placeholder-gray-400 bg-white focus:outline-none"
-                value={searchQuery}
-                onChange={handleSearch}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => handleSearch({ target: { value: "" } })}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center bg-transparent hover:bg-transparent focus:outline-none"
-                >
-                  <svg
-                    className="w-5 h-5 text-[#0099a8] hover:text-[#007a85] transition-colors duration-200"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-            {isFocused && (
-              <div className="mt-2 text-xs text-gray-500">
-                Tekan Enter untuk mencari
-              </div>
-            )}
-          </div>
+            </svg>
+          </button>
+        )}
+      </div>
+      {isSearchFocused && (
+        <div className="mt-2 text-xs text-gray-500">
+          Tekan Enter untuk mencari
         </div>
+      )}
+    </div>
+  );
 
+
+        <div className="mb-8 max-w-xs">
+  <label
+    className="block text-[13px] font-semibold text-gray-700 mb-2 tracking-widest"
+    style={{
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      letterSpacing: "0.09em",
+    }}
+  >
+    Tanggal Kunjungan
+  </label>
+  <div
+    className={`relative rounded-xl overflow-hidden transition-all duration-300 ${
+      isDateFocused
+        ? "ring-2 ring-[#0099a8] shadow-lg"
+        : "border border-gray-200 shadow-sm"
+    }`}
+  >
+    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+      {/* Icon kalender SVG */}
+      <svg
+        className={`w-5 h-5 transition-colors duration-200 ${
+          isDateFocused ? "text-[#0099a8]" : "text-gray-400"
+        }`}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    </div>
+    <input
+  type="date"
+  value={selectedDate}
+  onChange={e => {
+    setSelectedDate(e.target.value);
+    setCurrentPage(1);
+  }}
+  onFocus={() => setIsDateFocused(true)}
+  onBlur={() => setIsDateFocused(false)}
+  className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 bg-white focus:outline-none rounded-xl"
+  style={{
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    boxShadow: "none",
+    cursor: "pointer",
+    height: "48px",
+    // JANGAN tambahkan appearance: "none"
+  }}
+/>
+  </div>
+</div>
         <div className="mt-6 overflow-x-auto">
           {loading ? (
             <div className="text-center py-4">
@@ -445,6 +513,7 @@ const getStatusColor = (status) => {
               <table className="min-w-full bg-white">
                 <thead>
                   <tr className="bg-[#c9d6ec] text-gray-700 text-sm">
+                    <th className="px-4 py-3 font-medium text-left">Tanggal Kunjungan</th>
                     <th className="px-4 py-3 font-medium text-left">Antrian</th>
                     <th className="px-4 py-3 font-medium text-left">
                       No Registrasi
@@ -464,6 +533,7 @@ const getStatusColor = (status) => {
                         key={patient.no_registrasi}
                         className="hover:bg-gray-50 text-gray-700 transition-colors duration-200"
                       >
+                        <td className="px-4 py-3">{(patient.tgl_kunjungan || patient.created_at || "").slice(0, 10)}</td>
                         <td className="px-4 py-3">{patient.no_antrian}</td>
                         <td className="px-4 py-3">{patient.no_registrasi}</td>
                         <td className="px-4 py-3">{patient.rm}</td>
@@ -472,8 +542,8 @@ const getStatusColor = (status) => {
                         <td className="px-4 py-3">{patient.nama_dokter}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(patient.status)}`}>
-  {patient.status || "Menunggu"}
-</span>
+                          {patient.status || "Menunggu"}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <Link

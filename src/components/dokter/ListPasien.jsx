@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState, Fragment, useEffect } from "react";
+import React, { useRef, useState, Fragment, useEffect } from "react";
 import { Menu, Transition } from "@headlessui/react";
 
 const API_URL = "https://ti054a02.agussbn.my.id"; // Hardcoded API URL
@@ -16,6 +16,12 @@ const ListPasien = () => {
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
   const [allPatients, setAllPatients] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+});
+const [isDateFocused, setIsDateFocused] = useState(false);
+const dateInputRef = useRef(null);
 
   // ===== FUNGSI HELPER =====
   /**
@@ -158,14 +164,15 @@ const ListPasien = () => {
     const data = await response.json();
     if (data.data && Array.isArray(data.data)) {
       const mappedPatients = data.data.map(item => ({
-        no_antrian: item.pasien?.no_antrian ?? "",
-        no_registrasi: item.pasien?.no_registrasi ?? "",
-        rm: item.pasien?.rm ?? "",
-        nama_pasien: item.pasien?.nama_pasien ?? "",
-        nama_poli: item.pasien?.nama_poli ?? "",
-        nama_dokter: item.pasien?.nama_dokter ?? "",
-        status: item.pasien?.status,
-      }));
+  no_antrian: item.pasien?.no_antrian ?? "",
+  no_registrasi: item.pasien?.no_registrasi ?? "",
+  rm: item.pasien?.rm ?? "",
+  nama_pasien: item.pasien?.nama_pasien ?? "",
+  nama_poli: item.pasien?.nama_poli ?? "",
+  nama_dokter: item.pasien?.nama_dokter ?? "",
+  status: item.pasien?.status,
+  tgl_kunjungan: item.pasien?.tgl_kunjungan ?? item.pasien?.created_at ?? "", // <-- tambahkan ini!
+}));
       setAllPatients(mappedPatients);
     } else {
       setAllPatients([]);
@@ -204,6 +211,14 @@ useEffect(() => {
     );
   }
 
+  // === FILTER TANGGAL DI SINI ===
+  if (selectedDate) {
+    filtered = filtered.filter(
+      (p) =>
+        (p.tgl_kunjungan || p.created_at || "").slice(0, 10) === selectedDate
+    );
+  }
+
   // Pagination
   const itemsPerPage = 10;
   const totalItems = filtered.length;
@@ -213,7 +228,7 @@ useEffect(() => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   setPatients(filtered.slice(startIndex, endIndex));
-}, [allPatients, searchQuery, currentPage, poliName]);
+}, [allPatients, searchQuery, currentPage, poliName, selectedDate]);
 
   const handleSearch = (value) => {
     setSearchQuery(value);
@@ -484,6 +499,64 @@ const getStatusColor = (status) => {
             )}
           </div>
         </div>
+
+        <div className="mb-8 max-w-xs">
+  <label
+    className="block text-[13px] font-semibold text-gray-700 mb-2 tracking-widest"
+    style={{
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      letterSpacing: "0.09em",
+    }}
+  >
+    Tanggal Kunjungan
+  </label>
+  <div
+    className={`relative rounded-xl overflow-hidden transition-all duration-300 ${
+      isDateFocused
+        ? "ring-2 ring-[#0099a8] shadow-lg"
+        : "border border-gray-200 shadow-sm"
+    }`}
+  >
+    <div
+      className="absolute inset-y-0 left-0 pl-4 flex items-center cursor-pointer"
+      onClick={() => dateInputRef.current && dateInputRef.current.focus()}
+    >
+      <svg
+        className={`w-5 h-5 transition-colors duration-200 ${
+          isDateFocused ? "text-[#0099a8]" : "text-gray-400"
+        }`}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    </div>
+    <input
+      ref={dateInputRef}
+      type="date"
+      value={selectedDate}
+      onChange={e => {
+        setSelectedDate(e.target.value);
+        setCurrentPage(1);
+      }}
+      onFocus={() => setIsDateFocused(true)}
+      onBlur={() => setIsDateFocused(false)}
+      className="block w-full pl-12 pr-4 py-3.5 text-sm text-gray-700 bg-white focus:outline-none rounded-xl"
+      style={{
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        boxShadow: "none",
+        cursor: "pointer",
+        height: "48px",
+      }}
+    />
+  </div>
+</div>
 
         {/* Table */}
         <div className="mt-6 overflow-x-auto">

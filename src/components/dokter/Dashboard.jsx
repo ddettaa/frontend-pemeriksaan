@@ -13,26 +13,64 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true); // Status loading saat mengambil data
   const [error, setError] = useState(null); // Pesan error jika ada masalah
   const [antrianHariIni, setAntrianHariIni] = useState(0); // Jumlah antrian hari ini
-  // Fetch jumlah antrian hari ini dari /pendaftaran
+  // Fetch jumlah antrian hari ini dari /pendaftaran, filter by id_poli dan tanggal hari ini (zona waktu Indonesia)
+  const [idPoliUser, setIdPoliUser] = useState(null);
   useEffect(() => {
+    // Ambil id_poli dari localStorage user
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const userData = JSON.parse(stored);
+        let idPoli = null;
+        if (userData.poli && userData.poli.id_poli) {
+          idPoli = userData.poli.id_poli;
+        } else if (userData.id_poli) {
+          idPoli = userData.id_poli;
+        } else if (userData.poli_id) {
+          idPoli = userData.poli_id;
+        }
+        if (idPoli) setIdPoliUser(String(idPoli));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (!idPoliUser) return;
     const fetchAntrian = async () => {
       try {
         const res = await fetch("https://ti054a01.agussbn.my.id/api/pendaftaran");
         if (!res.ok) throw new Error("Failed to fetch antrian");
         const data = await res.json();
-        // Filter berdasarkan tgl_kunjungan = hari ini
-        const today = new Date();
-        const todayStr = new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-        const filtered = Array.isArray(data.data)
-          ? data.data.filter((item) => (item.tgl_kunjungan || "").slice(0, 10) === todayStr)
-          : [];
+        // Ambil tanggal hari ini di zona waktu Asia/Jakarta (WIB)
+        const now = new Date();
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(now); // yyyy-mm-dd
+        let filtered = Array.isArray(data.data) ? data.data : [];
+        // Debug: tampilkan semua data poli dan tanggal
+        console.log('[ANTRIAN] idPoliUser:', idPoliUser, 'todayStr:', todayStr);
+        filtered.forEach(item => {
+          console.log('[ANTRIAN] item.id_poli:', item.id_poli, 'tgl_kunjungan:', item.tgl_kunjungan, 'created_at:', item.created_at);
+        });
+        // Filter by id_poli
+        filtered = filtered.filter((item) => String(item.id_poli) === String(idPoliUser));
+        // Filter by tanggal (tgl_kunjungan atau created_at, fallback empty string)
+        filtered = filtered.filter((item) => {
+          // Prefer tgl_kunjungan jika ada, jika tidak created_at
+          let tglRaw = item.tgl_kunjungan || item.created_at || '';
+          let tglStr = tglRaw.slice(0, 10);
+          if (String(item.id_poli) === String(idPoliUser)) {
+            console.log('[ANTRIAN] After poli filter, tglRaw:', tglRaw, 'tglStr:', tglStr, 'todayStr:', todayStr, 'isSameDay:', tglStr === todayStr);
+          }
+          return tglStr === todayStr;
+        });
+        console.log('[ANTRIAN] Final filtered:', filtered);
         setAntrianHariIni(filtered.length);
-      } catch {
+      } catch (e) {
+        console.error('[ANTRIAN] Error:', e);
         setAntrianHariIni(0);
       }
     };
     fetchAntrian();
-  }, []);
+  }, [idPoliUser]);
 
   // ===== FUNGSI HELPER =====
   /**

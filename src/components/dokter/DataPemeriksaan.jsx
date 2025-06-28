@@ -380,11 +380,18 @@ const DataPemeriksaan = () => {
         </div>
 
         {/* Tombol */}
-        <Link to={`/dokter/diagnosa/${pemeriksaanData.no_reg}`}>
-          <button className="bg-[#0099a8] text-white px-5 py-2 rounded shadow text-sm float-right hover:bg-[#007a85] transition-colors duration-200">
-            SELANJUTNYA ⏵
-          </button>
-        </Link>
+        <div className="flex justify-end gap-2">
+          <Link to={`/dokter/diagnosa/${pemeriksaanData.no_reg}`}>
+            <button className="bg-[#0099a8] text-white px-5 py-2 rounded shadow text-sm hover:bg-[#007a85] transition-colors duration-200">
+              DIAGNOSA ⏵
+            </button>
+          </Link>
+          <Link to={`/dokter/rangkuman/${pemeriksaanData.no_reg}`}>
+            <button className="bg-white border border-[#0099a8] text-[#0099a8] px-5 py-2 rounded shadow text-sm hover:bg-[#e6f3f3] hover:text-[#007a85] hover:border-[#007a85] transition-colors duration-200">
+              RANGKUMAN
+            </button>
+          </Link>
+        </div>
       </main>
     </div>
   );

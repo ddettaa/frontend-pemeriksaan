@@ -18,6 +18,7 @@ import Resep from "./components/dokter/Resep";
 import ListPasienPerawat from "./components/perawat/ListPasienPerawat";
 import HistoryPerawat from "./components/perawat/HistoryPerawat";
 import InputPemeriksaan from "./components/perawat/InputPemeriksaan";
+import RangkumanPemeriksaan from "./components/perawat/RangkumanPemeriksaan";
 
 // Layout kosong dengan Outlet untuk nested route
 const PerawatLayout = () => <Outlet />;
@@ -40,6 +41,7 @@ function App() {
             </ProtectedRoute>
           }
         >
+          <Route path="rangkuman/:no_registrasi" element={<RangkumanPemeriksaan />} />
           <Route path="Dashboard" element={<DokterDashboard />} />
           <Route path="listPasien" element={<ListPasien />} />
           <Route
@@ -72,6 +74,7 @@ function App() {
             path="detail-history/:id_pasien"
             element={<div>Detail History Perawat (Coming Soon)</div>}
           />
+          <Route path="rangkuman/:no_registrasi" element={<RangkumanPemeriksaan />} />
           <Route path="akun" element={<div>Akun Perawat (Coming Soon)</div>} />
         </Route>
 

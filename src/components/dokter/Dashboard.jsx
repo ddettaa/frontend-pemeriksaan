@@ -13,8 +13,21 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true); // Status loading saat mengambil data
   const [error, setError] = useState(null); // Pesan error jika ada masalah
   const [antrianHariIni, setAntrianHariIni] = useState(0); // Jumlah antrian hari ini
-  // Fetch jumlah antrian hari ini dari /pendaftaran, filter by id_poli dan tanggal hari ini (zona waktu Indonesia)
   const [idPoliUser, setIdPoliUser] = useState(null);
+  // State untuk tanggal dan jam sekarang (WIB)
+  const [nowWIB, setNowWIB] = useState("");
+  // Update waktu sekarang (WIB) setiap detik
+  useEffect(() => {
+    const updateNow = () => {
+      const now = new Date();
+      // Format: Sabtu, 28 Juni 2025 14:05:01
+      const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' };
+      setNowWIB(new Intl.DateTimeFormat('id-ID', options).format(now));
+    };
+    updateNow();
+    const interval = setInterval(updateNow, 1000);
+    return () => clearInterval(interval);
+  }, []);
   useEffect(() => {
     // Ambil id_poli dari localStorage user
     try {
@@ -397,11 +410,15 @@ const Dashboard = () => {
             {/* Sapaan kepada dokter */}
             <p className="text-sm text-gray-600 mt-1">Halo, {doctorName || "Loading..."}</p>
             
-            {/* Box Antrian */}
-            <div className="mt-8 mb-6">
-              <div className="bg-[#c9d6ec] text-white inline-block rounded-md px-4 py-2 font-semibold w-[150px]">
+            {/* Box Antrian & Box Tanggal/Jam Sekarang */}
+            <div className="mt-8 mb-6 flex gap-4">
+              <div className="bg-[#4E71CC] opacity-80 text-white inline-block rounded-md px-4 py-2 font-semibold w-[150px]">
                 ANTRIAN <br />
                 <span className="text-xl font-bold text-white block">{antrianHariIni}</span>
+              </div>
+              <div className="bg-[#3A6065] text-white inline-block rounded-md px-4 py-2 font-semibold w-[260px]">
+                TANGGAL & JAM <br />
+                <span className="text-base font-bold text-white block" style={{wordBreak:'break-word'}}>{nowWIB}</span>
               </div>
             </div>
           </div>

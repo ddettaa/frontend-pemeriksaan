@@ -162,7 +162,10 @@ const handleCancel = async () => {
 
   const handleObatChange = (value, index) => {
     const newForms = [...forms];
+    // value adalah id_obat, cari nama_obat dari obatOptions
+    const selected = obatOptions.find((item) => item.id_obat === value);
     newForms[index].obat = value;
+    newForms[index].nama_obat = selected ? selected.nama_obat : "";
     setForms(newForms);
   };
 
@@ -174,8 +177,14 @@ const handleCancel = async () => {
 
   const handleJumlahChange = (e, index) => {
     const newForms = [...forms];
-    newForms[index].jumlah = parseInt(e.target.value, 10);
-
+    const val = e.target.value;
+    // Jika kosong, set string kosong agar input tetap bisa dihapus
+    if (val === "") {
+      newForms[index].jumlah = "";
+    } else {
+      const parsed = parseInt(val, 10);
+      newForms[index].jumlah = isNaN(parsed) ? "" : parsed;
+    }
     setForms(newForms);
   };
 
@@ -376,6 +385,7 @@ const handleCancel = async () => {
                     <Combobox.Input
                       className="w-full p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0099a8] focus:border-transparent text-[#0099a8] bg-white shadow-md hover:shadow-lg transition-shadow duration-200"
                       onChange={(event) => setQuery(event.target.value)}
+                      displayValue={() => form.nama_obat || ""}
                       placeholder="Cari Obat/BHP..."
                     />
                     <Transition

@@ -386,11 +386,6 @@ const DataPemeriksaan = () => {
               DIAGNOSA ⏵
             </button>
           </Link>
-          <Link to={`/dokter/rangkuman/${pemeriksaanData.no_reg}`}>
-            <button className="bg-white border border-[#0099a8] text-[#0099a8] px-5 py-2 rounded shadow text-sm hover:bg-[#e6f3f3] hover:text-[#007a85] hover:border-[#007a85] transition-colors duration-200">
-              RANGKUMAN
-            </button>
-          </Link>
         </div>
       </main>
     </div>
